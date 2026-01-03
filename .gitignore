@@ -1,0 +1,58 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Logs directory
+/logs/
+*.log
+erl_crash.dump
+
+# Test data directory
+/test_data/
+*.json
+!mix.lock
+
+# Temporary files
+/tmp/
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Ignore package tarball (built via "mix hex.build").
+diwa-*.tar
+
+# Escript binary
+/diwa
+/doc
+/dist_release
+# Runtime Data
+/nonode@nohost/
+/logs/
+/tmp/
+/*.txt
+/*.dump
+/*.tar.gz
+
+# Configuration
+/config/claude_desktop_config.json
+/priv/cert/
+
+# Enterprise Stubs
+/koda/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Agent Internal Files (Keep Workflows)
+/.agent/*
+!/.agent/workflows/

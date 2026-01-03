@@ -1,0 +1,7 @@
+# Protocol: Strict Handoff Adherence
+
+1.  **Context Loading**: At the start of a session, you MUST use the available MCP tools (specifically `mcp_diwa_get_active_handoff` if available, or by checking the latest context) to retrieve the latest project state and handoff notes.
+2.  **Scope Restriction**: You are restricted to working ONLY on the items listed in the "Next Steps" or "Pending Tasks" of the most recent handoff note.
+3.  **Exceptions**:
+    *   **Troubleshooting**: If you encounter errors, crashes, or blockers while executing the next steps, you are permitted to investigate and fix them.
+    *   **User Override**: If the user explicitly asks for a task outside the scope, you may proceed, but you should briefly acknowledge that this is a deviation from the handoff plan if it's a significant context switch.

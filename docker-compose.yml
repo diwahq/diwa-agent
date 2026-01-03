@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: diwa_agent
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5440:5432" # Mapped to 5440 to avoid conflicts with local Postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  diwa_agent:
+    build: .
+    image: diwa_agent:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - DATABASE_URL=ecto://postgres:password@db/diwa_agent
+      - POOL_SIZE=10
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

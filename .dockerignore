@@ -1,0 +1,12 @@
+.git
+.gitignore
+_build/
+deps/
+doc/
+test/
+scripts/
+.github/
+.vscode/
+.DS_Store
+*.swp
+mix.lock.backup
