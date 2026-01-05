@@ -2,8 +2,9 @@ defmodule DiwaAgent.Error do
   @moduledoc """
   Standardized error handling for DiwaAgent.
   """
-  
-  @type reason :: :not_found | :invalid_argument | :unauthorized | :conflict | :internal_error | :timeout
+
+  @type reason ::
+          :not_found | :invalid_argument | :unauthorized | :conflict | :internal_error | :timeout
   @type t :: %__MODULE__{
           reason: reason(),
           message: String.t(),

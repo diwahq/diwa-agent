@@ -14,8 +14,9 @@ defmodule DiwaAgent.Shortcuts.ExecutorTest do
       args = ["Doing work"]
       context_id = "ctx-123"
 
-      assert {:ok, {"log_progress", called_args}} = Executor.execute(definition, args, context_id, FakeExecutor)
-      
+      assert {:ok, {"log_progress", called_args}} =
+               Executor.execute(definition, args, context_id, FakeExecutor)
+
       assert called_args["message"] == "Doing work"
       assert called_args["context_id"] == "ctx-123"
     end
@@ -25,7 +26,7 @@ defmodule DiwaAgent.Shortcuts.ExecutorTest do
       # Too many args for schema
       args = ["Doing work", "Too many"]
       context_id = "ctx-123"
-      
+
       assert {:error, :too_many_arguments} = Executor.execute(definition, args, context_id)
     end
   end

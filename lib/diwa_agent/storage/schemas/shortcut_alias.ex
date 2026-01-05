@@ -6,10 +6,11 @@ defmodule DiwaAgent.Storage.Schemas.ShortcutAlias do
   @foreign_key_type :binary_id
 
   schema "shortcut_aliases" do
-    field :alias_name, :string
-    field :target_tool, :string
-    field :args_schema, {:array, :string} # JSON list of arg names e.g. ["title", "desc"]
-    
+    field(:alias_name, :string)
+    field(:target_tool, :string)
+    # JSON list of arg names e.g. ["title", "desc"]
+    field(:args_schema, {:array, :string})
+
     # Optional: Scoped to context or global? 
     # Plan says "custom aliases", implying maybe user specific or global.
     # For now assuming global or organization level.

@@ -2,7 +2,7 @@ defmodule DiwaAgent.Consensus.ClusterManager do
   @moduledoc """
   Stub for Consensus Cluster Manager.
   """
-  
+
   def get_cluster_status(_opts \\ []) do
     {:ok, %{status: "standalone", nodes: [], leader: nil}}
   end

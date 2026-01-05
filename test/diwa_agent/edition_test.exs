@@ -1,5 +1,6 @@
 defmodule DiwaAgent.EditionTest do
-  use ExUnit.Case, async: false # Async false because we manipulate Env
+  # Async false because we manipulate Env
+  use ExUnit.Case, async: false
   alias DiwaAgent.Edition
   alias DiwaAgent.EditionError
 
@@ -18,7 +19,7 @@ defmodule DiwaAgent.EditionTest do
     test "respects DIWA_EDITION env var" do
       System.put_env("DIWA_EDITION", "enterprise")
       assert DiwaAgent.Edition.current() == :enterprise
-      
+
       System.put_env("DIWA_EDITION", "team")
       assert DiwaAgent.Edition.current() == :team
     end
@@ -44,7 +45,7 @@ defmodule DiwaAgent.EditionTest do
       assert Edition.available?(:context_crud)
       assert Edition.available?(:health_engine)
       refute Edition.available?(:conflict_engine)
-      
+
       # Enterprise
       System.put_env("DIWA_EDITION", "enterprise")
       assert Edition.available?(:context_crud)
@@ -83,11 +84,11 @@ defmodule DiwaAgent.EditionTest do
     end
 
     test "raises EditionError if not available" do
-      assert_raise EditionError, fn -> 
+      assert_raise EditionError, fn ->
         Edition.require!(:conflict_engine)
       end
     end
-    
+
     test "exception contains correct metadata" do
       try do
         Edition.require!(:conflict_engine)

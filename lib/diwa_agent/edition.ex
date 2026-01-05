@@ -1,53 +1,56 @@
 defmodule DiwaAgent.Edition do
   @moduledoc """
   Runtime edition detection for DiwaAgent.
-  
+
   Detects which edition is available (community, team, enterprise)
   based on license keys, environment variables, and module availability.
   """
-  
+
   require Logger
   alias DiwaAgent.EditionError
 
   @type edition :: :community | :team | :enterprise
 
   # --- Feature Definitions ---
-  
+
   @community_features [
-    :context_crud, 
-    :memory_crud, 
-    :search, 
-    :sdlc_basic, 
+    :context_crud,
+    :memory_crud,
+    :search,
+    :sdlc_basic,
     :workflow_basic
   ]
-  
-  @team_features @community_features ++ [
-    :health_engine, 
-    :ace_basic, 
-    :organizations, 
-    :postgres,
-    :batch_operations, 
-    :dashboard_basic,
-    :agents,            # SINAG basic
-    :sdlc_enhanced,
-    :devops,
-    :knowledge,
-    :collaboration,
-    :ci_integration
-  ]
-  
-  @enterprise_features @team_features ++ [
-    :conflict_engine, 
-    :ace_full, 
-    :ledger, 
-    :workflow_advanced,
-    :backup,
-    :cross_context,
-    :sso,
-    :audit_log,
-    :dashboard_advanced
-  ]
-  
+
+  @team_features @community_features ++
+                   [
+                     :health_engine,
+                     :ace_basic,
+                     :organizations,
+                     :postgres,
+                     :batch_operations,
+                     :dashboard_basic,
+                     # SINAG basic
+                     :agents,
+                     :sdlc_enhanced,
+                     :devops,
+                     :knowledge,
+                     :collaboration,
+                     :ci_integration
+                   ]
+
+  @enterprise_features @team_features ++
+                         [
+                           :conflict_engine,
+                           :ace_full,
+                           :ledger,
+                           :workflow_advanced,
+                           :backup,
+                           :cross_context,
+                           :sso,
+                           :audit_log,
+                           :dashboard_advanced
+                         ]
+
   @edition_features %{
     community: @community_features,
     team: @team_features,
@@ -55,7 +58,7 @@ defmodule DiwaAgent.Edition do
   }
 
   # --- Tool to Feature Mapping ---
-  
+
   @tool_features %{
     # Context CRUD
     "create_context" => :context_crud,
@@ -63,15 +66,16 @@ defmodule DiwaAgent.Edition do
     "get_context" => :context_crud,
     "update_context" => :context_crud,
     "delete_context" => :context_crud,
-    
+
     # Memory CRUD
     "add_memory" => :memory_crud,
     "list_memories" => :memory_crud,
     "get_memory" => :memory_crud,
     "update_memory" => :memory_crud,
     "delete_memory" => :memory_crud,
-    "link_memories" => :memory_crud, # moved from SDLC essential list but under memory_crud flag
-    
+    # moved from SDLC essential list but under memory_crud flag
+    "link_memories" => :memory_crud,
+
     # Search
     "search_memories" => :search,
     "list_by_tag" => :search,
@@ -91,18 +95,20 @@ defmodule DiwaAgent.Edition do
     "get_pending_tasks" => :workflow_basic,
 
     # --- TEAM ---
-    
+
     # Health Engine
     "get_context_health" => :health_engine,
     "get_agent_health" => :health_engine,
-    "mcp_diwa_get_context_health" => :health_engine, # Handle namespaced versions too if needed
+    # Handle namespaced versions too if needed
+    "mcp_diwa_get_context_health" => :health_engine,
 
     # ACE Basic
     "run_context_scan" => :ace_basic,
 
     # Organizations
     "list_organizations" => :organizations,
-    "mcp_diwa_create_context" => :context_crud, # Alias check
+    # Alias check
+    "mcp_diwa_create_context" => :context_crud,
 
     # SDLC Enhanced (Team)
     "set_project_status" => :sdlc_enhanced,
@@ -112,10 +118,10 @@ defmodule DiwaAgent.Edition do
     # DevOps (Team)
     "record_deployment" => :devops,
     "log_incident" => :devops,
-    
+
     # Knowledge (Team)
     "record_pattern" => :knowledge,
-    
+
     # Collaboration (Team)
     "record_review" => :collaboration,
 
@@ -140,7 +146,8 @@ defmodule DiwaAgent.Edition do
     "list_conflicts" => :conflict_engine,
     "resolve_conflict" => :conflict_engine,
     "compare_memory_versions" => :conflict_engine,
-    "get_memory_history" => :conflict_engine, # Usually part of conflict/audit
+    # Usually part of conflict/audit
+    "get_memory_history" => :conflict_engine,
     "get_memory_tree" => :conflict_engine,
     "get_recent_changes" => :conflict_engine,
 
@@ -150,7 +157,8 @@ defmodule DiwaAgent.Edition do
 
     # Cross Context
     "search_lessons" => :cross_context,
-    "diwa.export_context" => :cross_context # Assuming export is high tier
+    # Assuming export is high tier
+    "diwa.export_context" => :cross_context
   }
 
   # --- Public API ---
@@ -174,28 +182,28 @@ defmodule DiwaAgent.Edition do
       # 3. Enterprise Module (Hybrid Check)
       Code.ensure_loaded?(DiwaEnterprise) ->
         :enterprise
-      
+
       # 4. Default
       true ->
         :community
     end
   end
-  
+
   @doc "Checks if a specific feature is available in the current edition."
   @spec available?(feature :: atom()) :: boolean
   def available?(feature) do
     features(current())
     |> Enum.member?(feature)
   end
-  
+
   @doc "Checks if a specific tool is available in the current edition."
   @spec tool_available?(tool_name :: String.t()) :: boolean
   def tool_available?(tool_name) do
     # Handle fully qualified "mcp_diwa_" prefix if passed by Router
     normalized_name = String.replace_prefix(tool_name, "mcp_diwa_", "")
-    
+
     feature = Map.get(@tool_features, normalized_name)
-    
+
     if feature do
       available?(feature)
     else
@@ -214,13 +222,13 @@ defmodule DiwaAgent.Edition do
     if available?(feature) do
       :ok
     else
-      raise EditionError, 
-        feature: feature, 
-        current_edition: current(), 
+      raise EditionError,
+        feature: feature,
+        current_edition: current(),
         required_edition: required_edition_for_feature(feature)
     end
   end
-  
+
   @doc "Requires a tool to be available, raising EditionError if not."
   @spec require_tool!(tool_name :: String.t()) :: :ok | no_return()
   def require_tool!(tool_name) do
@@ -229,6 +237,7 @@ defmodule DiwaAgent.Edition do
     else
       normalized_name = String.replace_prefix(tool_name, "mcp_diwa_", "")
       feature = Map.get(@tool_features, normalized_name)
+
       raise EditionError,
         feature: feature,
         tool: tool_name,
@@ -239,14 +248,15 @@ defmodule DiwaAgent.Edition do
 
   @doc "Returns lists of features for a given edition."
   def features(edition), do: Map.get(@edition_features, edition, @community_features)
-  
+
   @doc "Returns the required edition for a feature."
   def required_edition_for_feature(feature) do
     cond do
       Enum.member?(@community_features, feature) -> :community
       Enum.member?(@team_features, feature) -> :team
       Enum.member?(@enterprise_features, feature) -> :enterprise
-      true -> :enterprise # Default to strict
+      # Default to strict
+      true -> :enterprise
     end
   end
 
@@ -264,6 +274,7 @@ defmodule DiwaAgent.Edition do
 
   defp get_license_tier do
     key = System.get_env("DIWA_LICENSE_KEY")
+
     cond do
       String.contains?(key, "ENTERPRISE") -> :enterprise
       String.contains?(key, "TEAM") -> :team

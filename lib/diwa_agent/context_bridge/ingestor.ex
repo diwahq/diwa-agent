@@ -17,11 +17,11 @@ defmodule DiwaAgent.ContextBridge.Ingestor do
   """
   def run(context_id, opts \\ []) do
     dirs = opts[:dirs] || @default_dirs
-    
+
     {:ok, job} = create_job(context_id, opts)
-    
+
     try do
-      results = 
+      results =
         dirs
         |> Enum.flat_map(fn dir -> scan_directory(dir) end)
         |> Enum.map(fn file_path -> ingest_file(context_id, file_path) end)
@@ -70,7 +70,7 @@ defmodule DiwaAgent.ContextBridge.Ingestor do
   defp ingest_file(context_id, path) do
     content = File.read!(path)
     filename = Path.basename(path)
-    
+
     # Module 2 Integration: Automated Classification
     {:ok, class, priority, lifecycle} = MemoryClassification.classify(content, filename: filename)
 
@@ -105,9 +105,13 @@ defmodule DiwaAgent.ContextBridge.Ingestor do
 
   defp find_duplicate(context_id, content) do
     import Ecto.Query
-    query = from m in Memory, 
-      where: m.context_id == ^context_id and m.content == ^content,
-      limit: 1
+
+    query =
+      from(m in Memory,
+        where: m.context_id == ^context_id and m.content == ^content,
+        limit: 1
+      )
+
     Repo.one(query)
   end
 

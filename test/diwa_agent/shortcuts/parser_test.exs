@@ -12,7 +12,8 @@ defmodule DiwaAgent.Shortcuts.ParserTest do
     end
 
     test "parses quoted args" do
-      assert {:ok, "bug", ["Big Error", "Critical"]} = Parser.tokenize("/bug \"Big Error\" Critical")
+      assert {:ok, "bug", ["Big Error", "Critical"]} =
+               Parser.tokenize("/bug \"Big Error\" Critical")
     end
 
     test "fails without slash" do
@@ -24,9 +25,11 @@ defmodule DiwaAgent.Shortcuts.ParserTest do
     test "maps positional args to names" do
       args = ["My Title", "My Desc"]
       schema = [:title, :description]
-      assert {:ok, %{"title" => "My Title", "description" => "My Desc"}} = Parser.extract_args(args, schema)
+
+      assert {:ok, %{"title" => "My Title", "description" => "My Desc"}} =
+               Parser.extract_args(args, schema)
     end
-    
+
     test "handles too many args" do
       assert {:error, :too_many_arguments} = Parser.extract_args(["a", "b", "c"], [:one, :two])
     end

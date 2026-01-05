@@ -17,7 +17,7 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
   describe "resolve_context" do
     test "finds context by exact name" do
       {:ok, ctx} = Context.create("My Project", "Description")
-      
+
       result = Executor.execute("resolve_context", %{"name" => "My Project"})
       assert %{content: [%{type: "text", text: text}]} = result
       assert text =~ "Context found: 'My Project'"
@@ -26,20 +26,20 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
 
     test "finds context by case-insensitive name" do
       {:ok, ctx} = Context.create("Another Project", "Description")
-      
+
       result = Executor.execute("resolve_context", %{"name" => "another PROJECT"})
       assert %{content: [%{type: "text", text: text}]} = result
       assert text =~ "Context found: 'Another Project'"
       assert text =~ "ID: #{ctx.id}"
     end
-    
+
     test "finds context by ID if name is UUID" do
-       {:ok, ctx} = Context.create("UUID Project", "Description")
-       
-       result = Executor.execute("resolve_context", %{"name" => ctx.id})
-       assert %{content: [%{type: "text", text: text}]} = result
-       assert text =~ "Context found: 'UUID Project'"
-       assert text =~ "ID: #{ctx.id}"
+      {:ok, ctx} = Context.create("UUID Project", "Description")
+
+      result = Executor.execute("resolve_context", %{"name" => ctx.id})
+      assert %{content: [%{type: "text", text: text}]} = result
+      assert text =~ "Context found: 'UUID Project'"
+      assert text =~ "ID: #{ctx.id}"
     end
 
     test "returns error for non-existent context" do
@@ -54,16 +54,16 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
       {:ok, ctx} = Context.create("Verified Project", "Desc")
       # Add a memory to generate a commit
       Executor.execute("add_memory", %{"context_id" => ctx.id, "content" => "Mem 1"})
-      
+
       result = Executor.execute("verify_context_integrity", %{"context_id" => ctx.id})
       assert %{content: [%{type: "text", text: text}]} = result
       assert text =~ "no version history"
     end
-    
-     test "reports no history for empty context" do
+
+    test "reports no history for empty context" do
       {:ok, ctx} = Context.create("Empty Project", "Desc")
       # No additions, so no commits
-      
+
       result = Executor.execute("verify_context_integrity", %{"context_id" => ctx.id})
       assert %{content: [%{type: "text", text: text}]} = result
       assert text =~ "no version history"

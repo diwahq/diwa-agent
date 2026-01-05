@@ -30,10 +30,12 @@ defmodule DiwaAgent.Storage.MemoryVersion do
   List history of a specific memory.
   """
   def list_history(memory_id) do
-    query = from(v in MemoryVersion,
-      where: v.memory_id == ^memory_id,
-      order_by: [desc: v.inserted_at]
-    )
+    query =
+      from(v in MemoryVersion,
+        where: v.memory_id == ^memory_id,
+        order_by: [desc: v.inserted_at]
+      )
+
     {:ok, Repo.all(query)}
   end
 
@@ -51,11 +53,13 @@ defmodule DiwaAgent.Storage.MemoryVersion do
   Get the latest version of a memory.
   """
   def get_latest(memory_id) do
-    query = from(v in MemoryVersion,
-      where: v.memory_id == ^memory_id,
-      order_by: [desc: v.inserted_at],
-      limit: 1
-    )
+    query =
+      from(v in MemoryVersion,
+        where: v.memory_id == ^memory_id,
+        order_by: [desc: v.inserted_at],
+        limit: 1
+      )
+
     case Repo.one(query) do
       nil -> {:error, :not_found}
       version -> {:ok, version}
@@ -66,13 +70,15 @@ defmodule DiwaAgent.Storage.MemoryVersion do
   List recent changes (versions) across a context.
   """
   def list_recent_changes(context_id, limit \\ 20) do
-    query = from(v in MemoryVersion,
-      join: m in assoc(v, :memory),
-      where: m.context_id == ^context_id,
-      order_by: [desc: v.inserted_at],
-      limit: ^limit,
-      preload: [:memory]
-    )
+    query =
+      from(v in MemoryVersion,
+        join: m in assoc(v, :memory),
+        where: m.context_id == ^context_id,
+        order_by: [desc: v.inserted_at],
+        limit: ^limit,
+        preload: [:memory]
+      )
+
     {:ok, Repo.all(query)}
   end
 end

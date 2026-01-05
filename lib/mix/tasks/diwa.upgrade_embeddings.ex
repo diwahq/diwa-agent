@@ -22,53 +22,60 @@ defmodule Mix.Tasks.DiwaAgent.UpgradeEmbeddings do
 
   def run(args) do
     Mix.Task.run("app.start")
-    
+
     force = "--force" in args
-    
+
     Logger.info("Starting embedding upgrade/backfill...")
     Logger.info("Edition: #{DiwaAgent.Edition.current()}")
     Logger.info("Vector Type: #{Application.get_env(:diwa_agent, :vector_type, :unknown)}")
-    
+
     # Ensure Repos are started
     DiwaAgent.Repo.start_link()
-    
+
     import Ecto.Query
     alias DiwaAgent.Repo
     alias DiwaAgent.Storage.Schemas.Memory
-    
+
     # Query memories
     query = from(m in Memory)
-    
-    query = 
+
+    query =
       if force do
         query
       else
         from(m in query, where: is_nil(m.embedding))
       end
-      
+
     memories = Repo.all(query)
     total = length(memories)
-    
+
     Logger.info("Found #{total} memories to process.")
-    
-    embedding_module = Application.get_env(:diwa_agent, :embedding_module, DiwaAgent.AI.Embeddings)
-    vector_repo = Application.get_env(:diwa_agent, :vector_repo_module, DiwaAgent.Storage.PgVectorRepo)
-    
+
+    embedding_module =
+      Application.get_env(:diwa_agent, :embedding_module, DiwaAgent.AI.Embeddings)
+
+    vector_repo =
+      Application.get_env(:diwa_agent, :vector_repo_module, DiwaAgent.Storage.PgVectorRepo)
+
     Enum.each(Enum.with_index(memories), fn {memory, idx} ->
       if rem(idx, 10) == 0, do: Logger.info("Processing #{idx}/#{total}...")
-      
+
       case embedding_module.generate_embedding(memory.content) do
         {:ok, vector} ->
-           # Upsert using the repo (handles binary/vector logic)
-           case vector_repo.upsert_embedding(memory.id, vector, %{}) do
-             :ok -> :ok
-             {:error, e} -> Logger.error("Failed to save embedding for #{memory.id}: #{inspect(e)}")
-           end
+          # Upsert using the repo (handles binary/vector logic)
+          case vector_repo.upsert_embedding(memory.id, vector, %{}) do
+            :ok ->
+              :ok
+
+            {:error, e} ->
+              Logger.error("Failed to save embedding for #{memory.id}: #{inspect(e)}")
+          end
+
         {:error, e} ->
-           Logger.error("Failed to generate embedding for #{memory.id}: #{inspect(e)}")
+          Logger.error("Failed to generate embedding for #{memory.id}: #{inspect(e)}")
       end
     end)
-    
+
     Logger.info("Upgrade complete.")
   end
 end

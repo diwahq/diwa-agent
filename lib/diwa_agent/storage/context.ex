@@ -67,6 +67,7 @@ defmodule DiwaAgent.Storage.Context do
   end
 
   defp cast_uuid(nil), do: :error
+
   defp cast_uuid(id) do
     case Ecto.UUID.cast(id) do
       {:ok, uuid} -> {:ok, uuid}
@@ -121,38 +122,48 @@ defmodule DiwaAgent.Storage.Context do
 
     {:ok, Repo.one(query)}
   end
-  
+
   @doc """
   Find a context by name (case-insensitive).
   Returns {:ok, context} or {:error, :not_found}.
   """
   def find_by_name(name, organization_id \\ nil) do
     organization_id = organization_id || get_default_organization_id()
-    
+
     # First try exact match
-    query_exact = from c in Context,
-      where: c.organization_id == ^organization_id and c.name == ^name
-      
+    query_exact =
+      from(c in Context,
+        where: c.organization_id == ^organization_id and c.name == ^name
+      )
+
     case Repo.one(query_exact) do
-      %Context{} = ctx -> {:ok, ctx}
+      %Context{} = ctx ->
+        {:ok, ctx}
+
       nil ->
         # Try case-insensitive match
-        query_ilike = from c in Context,
-          where: c.organization_id == ^organization_id and fragment("lower(?)", c.name) == ^String.downcase(name)
-          
+        query_ilike =
+          from(c in Context,
+            where:
+              c.organization_id == ^organization_id and
+                fragment("lower(?)", c.name) == ^String.downcase(name)
+          )
+
         case Repo.one(query_ilike) do
-          %Context{} = ctx -> {:ok, ctx}
-          nil -> 
-             # Try searching by ID if the name looks like a UUID
-             if is_uuid?(name) do
-               get(name)
-             else
-               {:error, :not_found}
-             end
+          %Context{} = ctx ->
+            {:ok, ctx}
+
+          nil ->
+            # Try searching by ID if the name looks like a UUID
+            if is_uuid?(name) do
+              get(name)
+            else
+              {:error, :not_found}
+            end
         end
     end
   end
-  
+
   defp is_uuid?(str) do
     case Ecto.UUID.cast(str) do
       {:ok, _} -> true

@@ -3,9 +3,6 @@ ExUnit.start()
 
 # ExUnit.start() is already called at top
 
-
-
-
 # Setup Ecto Sandbox
 Ecto.Adapters.SQL.Sandbox.mode(DiwaAgent.Repo, :manual)
 

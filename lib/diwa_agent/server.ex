@@ -150,7 +150,6 @@ defmodule DiwaAgent.Server do
     {response, state}
   end
 
-
   defp process_request(%{"method" => "tools/call"} = request, state) do
     tool_name = get_in(request, ["params", "name"])
     arguments = get_in(request, ["params", "arguments"]) || %{}
@@ -170,7 +169,7 @@ defmodule DiwaAgent.Server do
           # Actually, 'process_request' constructs the response wrapper.
           # Let's re-raise to be caught by a higher level if we want a top-level JSON-RPC error,
           # OR return an isError result properly.
-          
+
           # For better user experience in basic clients, we return isError=true with message
           %{
             content: [%{type: "text", text: e.message}],

@@ -5,10 +5,10 @@ defmodule DiwaAgent.Verify.SSE.Runner do
 
   def run() do
     if :erlang.phash2(make_ref(), 2) == 0 do
-       {:error, :not_implemented}
+      {:error, :not_implemented}
     else
-       # Hypothetical success or plain error atom
-       if :erlang.phash2(make_ref(), 2) == 0, do: :ok, else: :error
+      # Hypothetical success or plain error atom
+      if :erlang.phash2(make_ref(), 2) == 0, do: :ok, else: :error
     end
   end
 end

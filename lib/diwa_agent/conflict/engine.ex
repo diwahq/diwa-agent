@@ -25,6 +25,7 @@ defmodule DiwaAgent.Conflict.AdaptiveThreshold do
   """
 
   def calculate(_opts \\ []) do
-    0.85 # Default threshold
+    # Default threshold
+    0.85
   end
 end

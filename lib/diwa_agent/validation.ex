@@ -12,10 +12,11 @@ defmodule DiwaAgent.Validation do
   end
 
   def validate_required(params, fields) do
-    missing = Enum.filter(fields, fn field -> 
-      val = Map.get(params, field) || Map.get(params, Atom.to_string(field))
-      is_nil(val) or val == ""
-    end)
+    missing =
+      Enum.filter(fields, fn field ->
+        val = Map.get(params, field) || Map.get(params, Atom.to_string(field))
+        is_nil(val) or val == ""
+      end)
 
     if Enum.empty?(missing) do
       {:ok, params}
@@ -28,7 +29,10 @@ defmodule DiwaAgent.Validation do
     if value in allowed_values do
       {:ok, value}
     else
-      {:error, Error.invalid_argument("Invalid value for #{field_name}: #{inspect(value)}. Allowed: #{inspect(allowed_values)}")}
+      {:error,
+       Error.invalid_argument(
+         "Invalid value for #{field_name}: #{inspect(value)}. Allowed: #{inspect(allowed_values)}"
+       )}
     end
   end
 end

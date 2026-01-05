@@ -17,10 +17,10 @@ defmodule DiwaAgent.Shortcuts.Registry do
 
   def init(_) do
     :ets.new(@table, [:named_table, :set, :public, read_concurrency: true])
-    
+
     # 1. Register Built-ins immediately
     register_builtins()
-    
+
     # 2. Load custom aliases from DB asynchronously
     {:ok, %{}, {:continue, :load_aliases}}
   end
@@ -61,7 +61,7 @@ defmodule DiwaAgent.Shortcuts.Registry do
     }
 
     # DB Transaction or direct insert
-    result = 
+    result =
       %ShortcutAlias{}
       |> ShortcutAlias.changeset(attrs)
       |> Repo.insert(on_conflict: :replace_all, conflict_target: :alias_name)
@@ -73,9 +73,10 @@ defmodule DiwaAgent.Shortcuts.Registry do
           tool: target_tool,
           schema: args_schema
         }
+
         :ets.insert(@table, {name, definition})
         :ok
-        
+
       {:error, changeset} ->
         Logger.error("Failed to register alias: #{inspect(changeset)}")
         {:error, "Database error"}
@@ -89,7 +90,7 @@ defmodule DiwaAgent.Shortcuts.Registry do
       {"todo", %{tool: "mcp_diwa_add_requirement", schema: [:title, :description, :priority]}},
       {"plan", %{tool: "get_project_status", schema: []}}
     ]
-    
+
     Enum.each(builtins, fn {name, def} ->
       :ets.insert(@table, {name, Map.put(def, :type, :builtin)})
     end)
@@ -99,15 +100,17 @@ defmodule DiwaAgent.Shortcuts.Registry do
     # Wrap in try/catch in case DB is not available (e.g. strict unit tests without sandbox)
     try do
       aliases = Repo.all(ShortcutAlias)
-      
+
       Enum.each(aliases, fn s ->
         definition = %{
           type: :alias,
           tool: s.target_tool,
           schema: Enum.map(s.args_schema || [], &String.to_atom/1)
         }
+
         :ets.insert(@table, {s.alias_name, definition})
       end)
+
       Logger.info("Loaded #{length(aliases)} custom shortcuts from DB.")
     rescue
       e -> Logger.warning("Could not load shortcuts from DB: #{inspect(e)}")

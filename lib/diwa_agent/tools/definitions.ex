@@ -61,7 +61,7 @@ defmodule DiwaAgent.Tools.Definitions do
       record_analysis_result(),
       link_memories(),
       get_memory_tree(),
-      
+
       # Agent Coordination (Phase 1.4)
       register_agent(),
       poll_delegated_tasks(),
@@ -948,6 +948,7 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
+
   defp register_agent do
     %{
       name: "register_agent",
@@ -956,9 +957,12 @@ defmodule DiwaAgent.Tools.Definitions do
         type: "object",
         properties: %{
           name: %{type: "string", description: "Name of the agent (e.g. 'Senior Coder')"},
-          role: %{type: "string", description: "Role/Responsibility (coding, qa, architect, general)"},
+          role: %{
+            type: "string",
+            description: "Role/Responsibility (coding, qa, architect, general)"
+          },
           capabilities: %{
-            type: "array", 
+            type: "array",
             items: %{type: "string"},
             description: "List of capabilities (e.g. ['elixir', 'testing', 'security'])"
           }
@@ -990,12 +994,15 @@ defmodule DiwaAgent.Tools.Definitions do
         type: "object",
         properties: %{
           from_agent_id: %{type: "string", description: "ID of the agent sending the task"},
-          to_agent_id: %{type: "string", description: "ID of the target agent (optional if role specified)"},
+          to_agent_id: %{
+            type: "string",
+            description: "ID of the target agent (optional if role specified)"
+          },
           context_id: %{type: "string", description: "The context this task belongs to"},
           task_definition: %{type: "string", description: "Description of the task to perform"},
           constraints: %{
             type: "object",
-             description: "Key-value constraints (e.g. timeout, scope)"
+            description: "Key-value constraints (e.g. timeout, scope)"
           }
         },
         required: ["from_agent_id", "context_id", "task_definition"]
@@ -1011,7 +1018,11 @@ defmodule DiwaAgent.Tools.Definitions do
         type: "object",
         properties: %{
           delegation_id: %{type: "string", description: "The ID of the delegation"},
-          status: %{type: "string", enum: ["accepted", "rejected"], description: "Response status"},
+          status: %{
+            type: "string",
+            enum: ["accepted", "rejected"],
+            description: "Response status"
+          },
           reason: %{type: "string", description: "Optional reason for rejection"}
         },
         required: ["delegation_id", "status"]
@@ -1038,6 +1049,7 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
+
   defp get_memory_history do
     %{
       name: "get_memory_history",
@@ -1097,6 +1109,7 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
+
   defp get_agent_health do
     %{
       name: "get_agent_health",
@@ -1167,7 +1180,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp arbitrate_conflict do
     %{
       name: "arbitrate_conflict",
-      description: "Initiate distributed conflict arbitration using Raft consensus. Coordinates resolution across multiple nodes with Byzantine fault tolerance.",
+      description:
+        "Initiate distributed conflict arbitration using Raft consensus. Coordinates resolution across multiple nodes with Byzantine fault tolerance.",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1182,7 +1196,8 @@ defmodule DiwaAgent.Tools.Definitions do
           participants: %{
             type: "array",
             items: %{type: "string"},
-            description: "List of node IDs to participate in arbitration (optional, defaults to all cluster nodes)"
+            description:
+              "List of node IDs to participate in arbitration (optional, defaults to all cluster nodes)"
           },
           timeout_ms: %{
             type: "integer",
@@ -1198,7 +1213,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp get_cluster_status do
     %{
       name: "get_cluster_status",
-      description: "Get the current status of the distributed consensus cluster, including membership, health, and leader information.",
+      description:
+        "Get the current status of the distributed consensus cluster, including membership, health, and leader information.",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1215,7 +1231,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp get_byzantine_nodes do
     %{
       name: "get_byzantine_nodes",
-      description: "List nodes that have been identified as Byzantine (faulty/malicious) and their suspicion levels. Includes quarantined nodes and those under investigation.",
+      description:
+        "List nodes that have been identified as Byzantine (faulty/malicious) and their suspicion levels. Includes quarantined nodes and those under investigation.",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1240,12 +1257,13 @@ defmodule DiwaAgent.Tools.Definitions do
   defp execute_shortcut do
     %{
       name: "execute_shortcut",
-      description: "Execute a shortcut command string. Resolves aliases and invokes the target MCP tool.",
+      description:
+        "Execute a shortcut command string. Resolves aliases and invokes the target MCP tool.",
       inputSchema: %{
         type: "object",
         properties: %{
           command: %{
-            type: "string", 
+            type: "string",
             description: "The full shortcut string (e.g. '/bug \"Failed validation\"')"
           },
           context_id: %{
@@ -1282,13 +1300,14 @@ defmodule DiwaAgent.Tools.Definitions do
             description: "The name of the new shortcut (without slash)"
           },
           target_tool: %{
-            type: "string", 
+            type: "string",
             description: "The actual MCP tool to call (e.g. 'log_progress')"
           },
           args_schema: %{
             type: "array",
             items: %{type: "string"},
-            description: "List of argument keys to map positional args to (e.g. ['message', 'title'])"
+            description:
+              "List of argument keys to map positional args to (e.g. ['message', 'title'])"
           }
         },
         required: ["alias_name", "target_tool"]
@@ -1299,7 +1318,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp classify_memory do
     %{
       name: "classify_memory",
-      description: "Analyze and classify a piece of content into a memory class (e.g., requirement, decision).",
+      description:
+        "Analyze and classify a piece of content into a memory class (e.g., requirement, decision).",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1314,7 +1334,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp ingest_context do
     %{
       name: "ingest_context",
-      description: "Scan local project directories (.agent, .cursor) and ingest classified files as memories.",
+      description:
+        "Scan local project directories (.agent, .cursor) and ingest classified files as memories.",
       inputSchema: %{
         type: "object",
         properties: %{

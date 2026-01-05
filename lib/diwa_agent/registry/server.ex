@@ -60,7 +60,8 @@ defmodule DiwaAgent.Registry.Server do
   @impl true
   def init(_) do
     Logger.info("[DiwaAgent.Registry] Agent Registry started.")
-    {:ok, %{}} # State is a map of agent_id => Agent struct
+    # State is a map of agent_id => Agent struct
+    {:ok, %{}}
   end
 
   @impl true
@@ -76,9 +77,15 @@ defmodule DiwaAgent.Registry.Server do
     case Map.get(state, agent_id) do
       nil ->
         {:reply, {:error, :not_found}, state}
-      
+
       agent ->
-        updated_agent = %{agent | status: status, current_context_id: context_id, last_heartbeat: DateTime.utc_now()}
+        updated_agent = %{
+          agent
+          | status: status,
+            current_context_id: context_id,
+            last_heartbeat: DateTime.utc_now()
+        }
+
         new_state = Map.put(state, agent_id, updated_agent)
         {:reply, :ok, new_state}
     end
@@ -92,13 +99,13 @@ defmodule DiwaAgent.Registry.Server do
 
   @impl true
   def handle_call({:find_idle, role}, _from, state) do
-    match = 
+    match =
       state
       |> Map.values()
-      |> Enum.find(fn agent -> 
-        agent.role == role and agent.status == :idle 
+      |> Enum.find(fn agent ->
+        agent.role == role and agent.status == :idle
       end)
-    
+
     {:reply, match, state}
   end
 
@@ -109,17 +116,20 @@ defmodule DiwaAgent.Registry.Server do
 
   @impl true
   def handle_cast({:heartbeat, agent_id}, state) do
-    new_state = 
+    new_state =
       case Map.get(state, agent_id) do
-        nil -> 
-          Logger.warning("[DiwaAgent.Registry] Received heartbeat from unknown agent: #{agent_id}")
+        nil ->
+          Logger.warning(
+            "[DiwaAgent.Registry] Received heartbeat from unknown agent: #{agent_id}"
+          )
+
           state
-        
+
         agent ->
           updated = %{agent | last_heartbeat: DateTime.utc_now()}
           Map.put(state, agent_id, updated)
       end
-      
+
     {:noreply, new_state}
   end
 end

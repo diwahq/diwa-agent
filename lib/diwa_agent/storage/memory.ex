@@ -10,8 +10,16 @@ defmodule DiwaAgent.Storage.Memory do
   import Ecto.Query
   require Logger
 
-  @embedding_module Application.compile_env(:diwa_agent, :embedding_module, DiwaAgent.AI.Embeddings)
-  @vector_repo_module Application.compile_env(:diwa_agent, :vector_repo_module, DiwaAgent.Storage.PgVectorRepo)
+  @embedding_module Application.compile_env(
+                      :diwa_agent,
+                      :embedding_module,
+                      DiwaAgent.AI.Embeddings
+                    )
+  @vector_repo_module Application.compile_env(
+                        :diwa_agent,
+                        :vector_repo_module,
+                        DiwaAgent.Storage.PgVectorRepo
+                      )
 
   @type memory :: %{
           id: String.t(),
@@ -44,7 +52,8 @@ defmodule DiwaAgent.Storage.Memory do
       tags = normalize_tags(Map.get(opts, :tags))
 
       # Automated Classification (Module 2)
-      {:ok, class, priority, lifecycle} = DiwaAgent.ContextBridge.MemoryClassification.classify(content)
+      {:ok, class, priority, lifecycle} =
+        DiwaAgent.ContextBridge.MemoryClassification.classify(content)
 
       attrs = %{
         context_id: context_id,
@@ -139,6 +148,7 @@ defmodule DiwaAgent.Storage.Memory do
   end
 
   defp cast_uuid(nil), do: :error
+
   defp cast_uuid(id) do
     case Ecto.UUID.cast(id) do
       {:ok, uuid} -> {:ok, uuid}
@@ -162,10 +172,12 @@ defmodule DiwaAgent.Storage.Memory do
           case memory |> Memory.changeset(changes) |> Repo.update() do
             {:ok, updated} ->
               spawn_embedding_task(updated, content)
+
               MemoryVersion.record(updated, "update", %{
                 actor: opts[:actor],
                 reason: opts[:reason]
               })
+
               update_context_timestamp(updated.context_id)
               updated
 
@@ -194,6 +206,7 @@ defmodule DiwaAgent.Storage.Memory do
                     actor: opts[:actor],
                     reason: opts[:reason] || "Metadata update"
                   })
+
                   updated
 
                 {:error, cs} ->
@@ -225,6 +238,7 @@ defmodule DiwaAgent.Storage.Memory do
                 actor: opts[:actor],
                 reason: opts[:reason]
               })
+
               update_context_timestamp(updated.context_id)
               :ok
 
@@ -251,6 +265,7 @@ defmodule DiwaAgent.Storage.Memory do
                 actor: opts[:actor],
                 reason: opts[:reason] || "Restored from history"
               })
+
               updated
 
             {:error, cs} ->
@@ -267,31 +282,30 @@ defmodule DiwaAgent.Storage.Memory do
     # Try vector search first via configured modules
     with {:ok, query_vec} <- @embedding_module.generate_embedding(query_str),
          {:ok, results} <- @vector_repo_module.search(query_vec, 20, context_id: context_id) do
-      
       # Extract IDs and similarity scores
       # results is list of %{id: id, similarity: score, ...}
       results = Enum.filter(results, fn r -> r.similarity >= 0.25 end)
       id_map = Map.new(results, fn r -> {r.id, r.similarity} end)
       ids = Map.keys(id_map)
-      
+
       base_query = from(m in Memory, where: m.id in ^ids)
-      
-      final_query = 
+
+      final_query =
         if context_id do
-           from(m in base_query, where: m.context_id == ^context_id)
+          from(m in base_query, where: m.context_id == ^context_id)
         else
-           base_query
+          base_query
         end
-      
+
       final_query
       |> Repo.all()
       |> Enum.sort_by(fn m -> id_map[m.id] end, :desc)
       |> then(fn
-           [] -> search_text(query_str, context_id)
-           results -> {:ok, results}
-         end)
+        [] -> search_text(query_str, context_id)
+        results -> {:ok, results}
+      end)
     else
-      _ -> 
+      _ ->
         # Fallback to Postgres FTS
         search_text(query_str, context_id)
     end
@@ -305,7 +319,9 @@ defmodule DiwaAgent.Storage.Memory do
         limit: 50
       )
 
-    query = if context_id, do: where(base_query, [m], m.context_id == ^context_id), else: base_query
+    query =
+      if context_id, do: where(base_query, [m], m.context_id == ^context_id), else: base_query
+
     {:ok, Repo.all(query)}
   end
 
@@ -398,6 +414,7 @@ defmodule DiwaAgent.Storage.Memory do
         case memory |> Memory.changeset(changes) |> Repo.update() do
           {:ok, updated} ->
             spawn_embedding_task(updated, version.content)
+
             MemoryVersion.record(updated, "rollback", %{
               actor: opts[:actor],
               reason: opts[:reason] || "Rollback to version #{version_id}",
@@ -423,24 +440,30 @@ defmodule DiwaAgent.Storage.Memory do
       Task.Supervisor.start_child(DiwaAgent.TaskSupervisor, fn ->
         case @embedding_module.generate_embedding(content) do
           {:ok, vec} ->
-             @vector_repo_module.upsert_embedding(memory.id, vec, %{})
-          _ -> :ok
+            @vector_repo_module.upsert_embedding(memory.id, vec, %{})
+
+          _ ->
+            :ok
         end
       end)
     else
       :ok
     end
   end
-  
+
   defp normalize_opts(opts) do
     case opts do
-      m when is_map(m) -> m
+      m when is_map(m) ->
+        m
+
       s when is_binary(s) ->
         case Jason.decode(s) do
           {:ok, decoded} when is_map(decoded) -> %{metadata: decoded}
           _ -> %{metadata: %{raw: s}}
         end
-      nil -> %{metadata: %{}}
+
+      nil ->
+        %{metadata: %{}}
     end
   end
 
@@ -452,14 +475,14 @@ defmodule DiwaAgent.Storage.Memory do
     end
   end
 
-
-
   defp decode_safe(val) when is_binary(val), do: Jason.decode(val)
   defp decode_safe(val), do: {:ok, val}
 
   defp update_context_timestamp(context_id) do
     case Repo.get(DiwaAgent.Storage.Schemas.Context, context_id) do
-      nil -> :ok
+      nil ->
+        :ok
+
       context ->
         context
         |> DiwaAgent.Storage.Schemas.Context.touch_changeset(%{updated_at: DateTime.utc_now()})

@@ -4,32 +4,46 @@ defmodule DiwaAgent.Delegation.Handoff do
   and complex agent-to-agent delegation (Phase 1.2).
   """
 
-  @derive {Jason.Encoder, only: [
-    :type,
-    :delegation_type,
-    :from_agent_id,
-    :to_agent_id,
-    :status,
-    :task_definition,
-    :constraints,
-    :timeout_at,
-    :next_steps,     # Legacy compatibility
-    :active_files,   # Legacy compatibility
-    :timestamp
-  ]}
+  @derive {Jason.Encoder,
+   only: [
+     :type,
+     :delegation_type,
+     :from_agent_id,
+     :to_agent_id,
+     :status,
+     :task_definition,
+     :constraints,
+     :timeout_at,
+     # Legacy compatibility
+     :next_steps,
+     # Legacy compatibility
+     :active_files,
+     :timestamp
+   ]}
 
   defstruct [
-    :type,            # Always "handoff"
-    :delegation_type, # :session (default) | :agent
-    :from_agent_id,   # ID of assigning agent
-    :to_agent_id,     # ID of target agent (optional for session)
-    :status,          # :pending, :accepted, :rejected, :in_progress, :completed, :failed
-    :task_definition, # Detailed task or objective
-    :constraints,     # map of limits (time, cost, scope)
-    :timeout_at,      # ISO8601 string
-    :next_steps,      # List of strings (Legacy/Session)
-    :active_files,    # List of strings (Legacy/Session)
-    :timestamp        # Created/Updated time
+    # Always "handoff"
+    :type,
+    # :session (default) | :agent
+    :delegation_type,
+    # ID of assigning agent
+    :from_agent_id,
+    # ID of target agent (optional for session)
+    :to_agent_id,
+    # :pending, :accepted, :rejected, :in_progress, :completed, :failed
+    :status,
+    # Detailed task or objective
+    :task_definition,
+    # map of limits (time, cost, scope)
+    :constraints,
+    # ISO8601 string
+    :timeout_at,
+    # List of strings (Legacy/Session)
+    :next_steps,
+    # List of strings (Legacy/Session)
+    :active_files,
+    # Created/Updated time
+    :timestamp
   ]
 
   @type t :: %__MODULE__{}
@@ -54,7 +68,6 @@ defmodule DiwaAgent.Delegation.Handoff do
     # Try atom key first, then string key
     Map.get(attrs, key) || Map.get(attrs, Atom.to_string(key)) || default
   end
-
 
   def to_metadata(%__MODULE__{} = handoff) do
     handoff
