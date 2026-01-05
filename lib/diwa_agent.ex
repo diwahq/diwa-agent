@@ -1,18 +1,5 @@
 defmodule DiwaAgent do
   @moduledoc """
-  Documentation for `Koda`.
+  Documentation for `DiwaAgent`.
   """
-
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> DiwaAgent.hello()
-      :world
-
-  """
-  def hello do
-    :world
-  end
 end
