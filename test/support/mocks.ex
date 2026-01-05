@@ -21,6 +21,7 @@ defmodule DiwaAgent.Test.FakeVectorRepo do
       :undefined -> :ets.new(@table, [:named_table, :set, :public])
       _ -> :ok
     end
+
     {:ok, self()}
   end
 
@@ -32,8 +33,8 @@ defmodule DiwaAgent.Test.FakeVectorRepo do
   def search(query_vector, limit, _opts \\ []) do
     # Very simple Euclidean distance search
     all = :ets.tab2list(@table)
-    
-    results = 
+
+    results =
       all
       |> Enum.map(fn {id, vec} ->
         dist = calculate_distance(query_vector, vec)

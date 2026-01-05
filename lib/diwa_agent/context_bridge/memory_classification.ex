@@ -36,14 +36,15 @@ defmodule DiwaAgent.ContextBridge.MemoryClassification do
   """
   def classify(content, opts \\ [])
   def classify(nil, _opts), do: {:ok, :observation, :low, :ephemeral}
+
   def classify(content, opts) do
     filename = opts[:filename]
-    
+
     # Simple pattern matching logic
     cond do
       filename && String.match?(filename, ~r/handoff|resume/i) ->
         {:ok, :handoff, :high, :session}
-        
+
       filename && String.match?(filename, ~r/decision|adr/i) ->
         {:ok, :design_decision, :high, :permanent}
 

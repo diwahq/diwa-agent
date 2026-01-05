@@ -265,8 +265,9 @@ defmodule DiwaAgent.Storage.MemoryTest do
       assert {:ok, results} = Memory.search("Phoenix", context.id)
       # Debugging search results if count mismatches
       if length(results) != 2 do
-         IO.inspect(results, label: "Unexpected Search Results")
+        IO.inspect(results, label: "Unexpected Search Results")
       end
+
       # Temporarily allowing 2 or 3 if semantic search is fuzzy
       # Semantic search without threshold may return all items in context
       assert length(results) >= 2

@@ -18,8 +18,10 @@ defmodule DiwaAgent.Storage.Schemas.IngestJob do
              :updated_at
            ]}
   schema "ingest_jobs" do
-    field(:status, :string) # pending, running, completed, failed
-    field(:source_type, :string) # agent_dir, cursor_dir, git, custom
+    # pending, running, completed, failed
+    field(:status, :string)
+    # agent_dir, cursor_dir, git, custom
+    field(:source_type, :string)
     field(:source_path, :string)
     field(:stats, :map, default: %{})
     field(:metadata, :map, default: %{})

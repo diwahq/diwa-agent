@@ -5,9 +5,9 @@ defmodule DiwaAgent.Storage.Schemas.Secret do
   @primary_key {:id, :binary_id, autogenerate: true}
 
   schema "secrets" do
-    field :key, :string
-    field :value_encrypted, :binary
-    
+    field(:key, :string)
+    field(:value_encrypted, :binary)
+
     timestamps()
   end
 

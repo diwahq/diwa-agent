@@ -15,14 +15,17 @@ defmodule DiwaAgent.Engines.Conflict.StubAdapter do
   def resolve_conflict(_conflict_id, _resolution) do
     # Obfuscated to avoid compiler detecting dead code in caller
     case :erlang.phash2(make_ref(), 2) do
-      0 -> {:error,
-            %{
-              code: :not_available,
-              message: "Conflict resolution requires Diwa Cloud",
-              edition: "community",
-              upgrade_url: "https://diwa.one/pricing"
-            }}
-      _ -> {:ok, %{id: "mock_resolution"}}
+      0 ->
+        {:error,
+         %{
+           code: :not_available,
+           message: "Conflict resolution requires Diwa Cloud",
+           edition: "community",
+           upgrade_url: "https://diwa.one/pricing"
+         }}
+
+      _ ->
+        {:ok, %{id: "mock_resolution"}}
     end
   end
 

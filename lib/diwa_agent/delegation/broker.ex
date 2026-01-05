@@ -50,7 +50,7 @@ defmodule DiwaAgent.Delegation.Broker do
   @impl true
   def handle_call({:delegate, %Handoff{} = handoff}, _from, state) do
     target_id = handoff.to_agent_id
-    
+
     if is_nil(target_id) do
       {:reply, {:error, :missing_target_agent}, state}
     else
@@ -64,20 +64,20 @@ defmodule DiwaAgent.Delegation.Broker do
       # Or strict Handoff struct?
       # Let's add a virtual ID or assume caller handles persistence.
       # For Phase 1.3 (Broker), let's track by a generated ref if not provided.
-      
+
       # Let's assume we pass a struct that might need an ID.
       # Actually, let's wrap it in a lightweight internal struct or just map.
-      
+
       # We'll use a unique reference for the broker's lifecycle.
       ref = UUID.uuid4()
       # handoff_with_ref = Map.put(handoff, :broker_ref, ref) # Dynamic addition? No, struct.
       # We can't modify struct. Let's rely on the fact that we should probably store this as a Memory first.
       # But the Broker is for *active routing*.
       # Let's store it in `pending` map keyed by ref, and return ref.
-      
+
       updated_queues = Map.update(state.queues, target_id, [ref], fn list -> list ++ [ref] end)
       updated_pending = Map.put(state.pending, ref, handoff)
-      
+
       Logger.info("[Broker] Delegated task to #{target_id} (Ref: #{ref})")
       {:reply, {:ok, ref}, %{state | queues: updated_queues, pending: updated_pending}}
     end
@@ -86,26 +86,28 @@ defmodule DiwaAgent.Delegation.Broker do
   @impl true
   def handle_call({:poll, agent_id}, _from, state) do
     case Map.get(state.queues, agent_id) do
-      nil -> 
+      nil ->
         {:reply, {:ok, []}, state}
-      [] -> 
+
+      [] ->
         {:reply, {:ok, []}, state}
+
       [ref | rest] ->
         # FIFO basics. 
         # Pop the first task.
         task = Map.get(state.pending, ref)
-        
+
         # We assume the agent *takes* it. 
         # Should we remove from queue? Yes.
         # Should we keep in 'pending' until complete? Yes, mark as in-progress?
         # For simple polling, let's just return it and keep tracking.
-        
+
         updated_queues = Map.put(state.queues, agent_id, rest)
-        
+
         # Update status in pending? (Not strictly necessary for MVP polling, but good for tracking)
         # We return the task + its ref so agent can complete it later.
-        
-        {:reply, {:ok, [%{task | active_files: [ref]}]}, %{state | queues: updated_queues}} 
+
+        {:reply, {:ok, [%{task | active_files: [ref]}]}, %{state | queues: updated_queues}}
         # Hack: Storing ref in active_files for now since we lack ID field? 
         # Better: Return tuple or wrapper. But client expects simple list.
         # Let's return the task object. The agent needs to know the ID to complete it.

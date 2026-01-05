@@ -21,10 +21,12 @@ defmodule DiwaAgent.ContextBridge.LiveSync do
     }
 
     case %Session{} |> Session.changeset(attrs) |> Repo.insert() do
-      {:ok, session} -> 
+      {:ok, session} ->
         Logger.info("Session started: #{session.id} for actor #{actor}")
         {:ok, session}
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -35,23 +37,25 @@ defmodule DiwaAgent.ContextBridge.LiveSync do
     # Currently we just log to standard logger or could add to session metadata
     # In a more advanced version, we might create 'activity' memories
     Logger.info("[Session #{session_id}] #{message} | #{inspect(metadata)}")
-    
+
     # Optional: Update session metadata with 'active_files' etc
     if files = metadata[:active_files] do
       update_session_files(session_id, files)
     end
-    
+
     :ok
   end
 
   defp update_session_files(session_id, new_files) do
     case Repo.get(Session, session_id) do
-      nil -> :ok
+      nil ->
+        :ok
+
       session ->
         current_meta = session.metadata || %{}
         existing_files = current_meta["active_files"] || []
         updated_files = (existing_files ++ new_files) |> Enum.uniq()
-        
+
         session
         |> Session.changeset(%{metadata: Map.put(current_meta, "active_files", updated_files)})
         |> Repo.update()
@@ -63,23 +67,26 @@ defmodule DiwaAgent.ContextBridge.LiveSync do
   """
   def end_session(session_id, summary, next_steps \\ []) do
     case Repo.get(Session, session_id) do
-      nil -> {:error, :not_found}
+      nil ->
+        {:error, :not_found}
+
       session ->
         # Finalize session
         Repo.transaction(fn ->
-          updated_session = 
+          updated_session =
             session
             |> Session.changeset(%{ended_at: DateTime.utc_now(), summary: summary})
             |> Repo.update!()
 
           # Create Handoff Memory
-          handoff_data = Handoff.new(%{
-            context_id: session.context_id,
-            from_agent_id: session.actor,
-            task_definition: summary,
-            next_steps: next_steps,
-            active_files: session.metadata["active_files"] || []
-          })
+          handoff_data =
+            Handoff.new(%{
+              context_id: session.context_id,
+              from_agent_id: session.actor,
+              task_definition: summary,
+              next_steps: next_steps,
+              active_files: session.metadata["active_files"] || []
+            })
 
           memory_attrs = %{
             context_id: session.context_id,

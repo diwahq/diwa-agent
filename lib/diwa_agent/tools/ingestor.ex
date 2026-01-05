@@ -12,20 +12,20 @@ defmodule DiwaAgent.Tools.Ingestor do
   """
   def ingest(context_id) do
     if File.dir?(@agent_dir) do
-      files = 
+      files =
         @agent_dir
         |> File.ls!()
         |> Enum.filter(&String.ends_with?(&1, ".md"))
 
-      results = 
+      results =
         Enum.map(files, fn filename ->
           path = Path.join(@agent_dir, filename)
           content = File.read!(path)
-          
+
           # Use filename (without extension) as a tag
           base_name = Path.rootname(filename)
           tags = [base_name, "agent-context", "ingested"]
-          
+
           metadata = %{
             "source" => "local_file",
             "filename" => filename,
@@ -43,12 +43,12 @@ defmodule DiwaAgent.Tools.Ingestor do
 
       successful = Enum.filter(results, &match?({:ok, _}, &1)) |> length()
       failed = Enum.filter(results, &match?({:error, _}, &1))
-      
+
       summary = """
       ✓ Ingested #{successful} files from .agent directory.
       #{if length(failed) > 0, do: "❌ Failed: #{length(failed)} files.\n" <> format_errors(failed), else: ""}
       """
-      
+
       {:ok, summary}
     else
       {:error, "Directory .agent not found in current project root."}

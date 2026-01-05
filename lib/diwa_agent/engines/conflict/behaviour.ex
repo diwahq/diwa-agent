@@ -28,6 +28,10 @@ defmodule DiwaAgent.Engines.Conflict.Behaviour do
   @callback resolve_conflict(conflict_id :: String.t(), resolution :: resolution()) ::
               {:ok, conflict()} | {:error, term()}
 
-  @callback arbitrate_conflict(conflict_id :: String.t(), context_id :: String.t(), opts :: keyword()) ::
+  @callback arbitrate_conflict(
+              conflict_id :: String.t(),
+              context_id :: String.t(),
+              opts :: keyword()
+            ) ::
               {:ok, map()} | {:error, term()}
 end

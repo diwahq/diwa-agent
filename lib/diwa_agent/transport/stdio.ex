@@ -25,6 +25,7 @@ defmodule DiwaAgent.Transport.Stdio do
 
   defp read_loop do
     IO.puts(:stderr, "[DiwaAgent.Transport.Stdio] DEBUG: Calling IO.read")
+
     case IO.read(:stdio, :line) do
       :eof ->
         Logger.info("[DiwaAgent.Transport.Stdio] EOF received, shutting down")

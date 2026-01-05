@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.DiwaAgent.Shortcut do
   @moduledoc """
   Executes a Diwa shortcut from the command line.
-  
+
   ## Usage
       mix diwa.shortcut "/bug 'Title' 'Description'" --context <uuid>
   """
@@ -13,10 +13,11 @@ defmodule Mix.Tasks.DiwaAgent.Shortcut do
     # Ensure app is started to have Registry/ETS available
     Mix.Task.run("app.start")
 
-    {opts, argv, _errors} = OptionParser.parse(args, 
-      switches: [context: :string],
-      aliases: [c: :context]
-    )
+    {opts, argv, _errors} =
+      OptionParser.parse(args,
+        switches: [context: :string],
+        aliases: [c: :context]
+      )
 
     command_str = Enum.join(argv, " ")
     context_id = opts[:context] || raise "Context ID is required via --context"

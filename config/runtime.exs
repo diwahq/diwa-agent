@@ -5,8 +5,7 @@ if config_env() == :prod do
     System.get_env("DIWA_AGENT_DATABASE_PATH") ||
       "priv/diwa_agent.db"
 
-  config :diwa_agent, DiwaAgent.Repo,
-    database: database_path
+  config :diwa_agent, DiwaAgent.Repo, database: database_path
 
   # Log level from env
   log_level =

@@ -10,8 +10,11 @@ defmodule DiwaAgent.Tools.Executor do
   alias DiwaAgent.Registry.Server, as: Registry
   require Logger
 
-  @consensus_module Application.compile_env(:diwa_agent, :consensus_module, DiwaAgent.Consensus.ClusterManager)
-
+  @consensus_module Application.compile_env(
+                      :diwa_agent,
+                      :consensus_module,
+                      DiwaAgent.Consensus.ClusterManager
+                    )
 
   @doc """
   Execute a tool with the given arguments.
@@ -29,7 +32,12 @@ defmodule DiwaAgent.Tools.Executor do
     case Context.create(name, description, organization_id) do
       {:ok, context} ->
         # Record genesis commit
-        DiwaAgent.CVC.record_commit(context.id, "antigravity", context.id, "Context Created (Genesis)")
+        DiwaAgent.CVC.record_commit(
+          context.id,
+          "antigravity",
+          context.id,
+          "Context Created (Genesis)"
+        )
 
         success_response("""
         ✓ Context '#{context.name}' created successfully!
@@ -100,7 +108,6 @@ defmodule DiwaAgent.Tools.Executor do
       {:error, reason} ->
         error_response("Error retrieving context: #{inspect(reason)}")
     end
-
   end
 
   def execute("resolve_context", %{"name" => name}) do
@@ -108,15 +115,15 @@ defmodule DiwaAgent.Tools.Executor do
       {:ok, context} ->
         success_response("""
         ✓ Context found: '#{context.name}'
-        
+
         ID: #{context.id}
         Organization: #{context.organization_id}
         Description: #{context.description || "N/A"}
         """)
-        
+
       {:error, :not_found} ->
         error_response("Context not found with name: '#{name}'")
-        
+
       {:error, reason} ->
         error_response("Error resolving context: #{inspect(reason)}")
     end
@@ -136,7 +143,13 @@ defmodule DiwaAgent.Tools.Executor do
     else
       case Context.update(context_id, updates) do
         {:ok, context} ->
-          DiwaAgent.CVC.record_commit(context.id, "antigravity", context.id, "Context metadata updated")
+          DiwaAgent.CVC.record_commit(
+            context.id,
+            "antigravity",
+            context.id,
+            "Context metadata updated"
+          )
+
           success_response("✓ Context '#{context.name}' updated successfully!")
 
         {:error, :not_found} ->
@@ -172,16 +185,16 @@ defmodule DiwaAgent.Tools.Executor do
         severity: Map.get(args, "severity")
       }
 
-    # Patent #3: Check collision logic temporarily disabled for Phase 1 Migration
-    # check_conflict requires valid SemanticFingerprint generation which happens asynchronously now
-    # TODO: Re-enable instant collision detection in Phase 2
-    
+      # Patent #3: Check collision logic temporarily disabled for Phase 1 Migration
+      # check_conflict requires valid SemanticFingerprint generation which happens asynchronously now
+      # TODO: Re-enable instant collision detection in Phase 2
+
       case Memory.add(context_id, content, opts) do
         {:ok, memory} ->
-           # CVC: Record commit
-           platform = opts[:actor] || "antigravity"
-           DiwaAgent.CVC.record_commit(context_id, platform, memory.id, "Added memory via MCP")
-           
+          # CVC: Record commit
+          platform = opts[:actor] || "antigravity"
+          DiwaAgent.CVC.record_commit(context_id, platform, memory.id, "Added memory via MCP")
+
           success_response("""
           ✓ Memory added successfully!
 
@@ -202,10 +215,11 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("add_memories", %{"context_id" => context_id, "memories" => memories}) do
     # Check if we should register the platform for CVC
-    platform = "antigravity" # Inferred default as we are running in AG environment mostly?
-                             # Or we should try to extract it from somewhere.
-                             # For now, let's just record commits if we can.
-    
+    # Inferred default as we are running in AG environment mostly?
+    platform = "antigravity"
+    # Or we should try to extract it from somewhere.
+    # For now, let's just record commits if we can.
+
     results =
       Enum.map(memories, fn mem_args ->
         opts = %{
@@ -219,15 +233,23 @@ defmodule DiwaAgent.Tools.Executor do
         }
 
         content = Map.get(mem_args, "content")
-        
+
         case Memory.add(context_id, content, opts) do
           {:ok, memory} ->
-             # Record CVC commit for each memory
-             actor_platform = opts[:actor] || platform
-             DiwaAgent.CVC.record_commit(context_id, actor_platform, memory.id, "Batch added memory")
-             {:ok, memory}
-             
-          error -> error
+            # Record CVC commit for each memory
+            actor_platform = opts[:actor] || platform
+
+            DiwaAgent.CVC.record_commit(
+              context_id,
+              actor_platform,
+              memory.id,
+              "Batch added memory"
+            )
+
+            {:ok, memory}
+
+          error ->
+            error
         end
       end)
 
@@ -242,6 +264,7 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("classify_memory", %{"content" => content} = args) do
     filename = Map.get(args, "filename")
+
     case DiwaAgent.ContextBridge.MemoryClassification.classify(content, filename: filename) do
       {:ok, class, priority, lifecycle} ->
         success_response("""
@@ -255,14 +278,17 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("hydrate_context", %{"context_id" => cid} = args) do
     depth_str = Map.get(args, "depth", "standard")
-    depth = case depth_str do
-      "minimal" -> :minimal
-      "standard" -> :standard
-      "comprehensive" -> :comprehensive
-      _ -> :standard
-    end
+
+    depth =
+      case depth_str do
+        "minimal" -> :minimal
+        "standard" -> :standard
+        "comprehensive" -> :comprehensive
+        _ -> :standard
+      end
+
     focus = Map.get(args, "focus")
-    
+
     case DiwaAgent.ContextBridge.Hydration.hydrate(cid, depth: depth, focus: focus) do
       {:ok, result} -> success_response(format_hydration(result))
       error -> error_response("Hydration failed: #{inspect(error)}")
@@ -271,18 +297,23 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("validate_action", %{"context_id" => cid, "content" => content} = args) do
     mode_str = Map.get(args, "mode", "warn")
-    mode = case mode_str do
-      "strict" -> :strict
-      "warn" -> :warn
-      "audit" -> :audit
-      _ -> :warn
-    end
-    
+
+    mode =
+      case mode_str do
+        "strict" -> :strict
+        "warn" -> :warn
+        "audit" -> :audit
+        _ -> :warn
+      end
+
     case DiwaAgent.ContextBridge.RuleEnforcement.validate(cid, content, mode: mode) do
-      {:ok, :valid} -> success_response("✓ Action complies with all project rules.")
-      {:warn, :violations, list} -> 
+      {:ok, :valid} ->
+        success_response("✓ Action complies with all project rules.")
+
+      {:warn, :violations, list} ->
         warnings = Enum.map(list, fn v -> "• #{v.title}: #{v.message}" end) |> Enum.join("\n")
         success_response("⚠️ Rule Warnings:\n\n#{warnings}")
+
       {:error, :violations, list} ->
         errors = Enum.map(list, fn v -> "• #{v.title}: #{v.message}" end) |> Enum.join("\n")
         error_response("❌ Rule Violations (Strict Mode):\n\n#{errors}")
@@ -291,22 +322,25 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("ingest_context", %{"context_id" => context_id} = args) do
     dirs = Map.get(args, "directories", [".agent", ".cursor"])
-    
+
     case DiwaAgent.ContextBridge.Ingestor.run(context_id, dirs: dirs) do
-      {:ok, stats} -> 
+      {:ok, stats} ->
         success_response("""
         ✓ Context Ingestion Complete!
-        
+
         Created: #{stats.created}
         Skipped: #{stats.skipped}
         Failed: #{stats.failed}
         """)
-      {:error, reason} -> error_response("Ingestion failed: #{inspect(reason)}")
+
+      {:error, reason} ->
+        error_response("Ingestion failed: #{inspect(reason)}")
     end
   end
 
   def execute("start_session", %{"context_id" => cid, "actor" => actor} = args) do
     metadata = Map.get(args, "metadata", %{})
+
     case DiwaAgent.ContextBridge.LiveSync.start_session(cid, actor, metadata) do
       {:ok, session} -> success_response("✓ Session started! ID: #{session.id}")
       {:error, reason} -> error_response("Failed to start session: #{inspect(reason)}")
@@ -321,6 +355,7 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("end_session", %{"session_id" => sid, "summary" => sum} = args) do
     next_steps = Map.get(args, "next_steps", [])
+
     case DiwaAgent.ContextBridge.LiveSync.end_session(sid, sum, next_steps) do
       {:ok, _session} -> success_response("✓ Session ended and handoff note recorded.")
       {:error, reason} -> error_response("Failed to end session: #{inspect(reason)}")
@@ -382,7 +417,13 @@ defmodule DiwaAgent.Tools.Executor do
   def execute("update_memory", %{"memory_id" => memory_id, "content" => content}) do
     case Memory.update(memory_id, content) do
       {:ok, memory} ->
-        DiwaAgent.CVC.record_commit(memory.context_id, "antigravity", memory.id, "Updated memory content")
+        DiwaAgent.CVC.record_commit(
+          memory.context_id,
+          "antigravity",
+          memory.id,
+          "Updated memory content"
+        )
+
         success_response("✓ Memory updated successfully!")
 
       {:error, :not_found} ->
@@ -421,12 +462,14 @@ defmodule DiwaAgent.Tools.Executor do
         count =
           Enum.count(facts, fn fact ->
             description = fact.doc_summary || "No documentation extracted."
-            content = "### ACE Fact: #{fact.name}\n\n#{description}\n\nFile: `#{fact.source}`:#{fact.line}"
-            
+
+            content =
+              "### ACE Fact: #{fact.name}\n\n#{description}\n\nFile: `#{fact.source}`:#{fact.line}"
+
             # Extract category/confidence from metadata if present, else default
             category = Map.get(fact.metadata, :category, "General")
             confidence = Map.get(fact.metadata, :confidence, 1.0)
-            
+
             metadata = %{
               type: "ace_fact",
               fact_type: fact.type,
@@ -460,14 +503,17 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("delete_memory", %{"memory_id" => memory_id}) do
     # Fetch first to get context_id for CVC
-    context_id = case Memory.get(memory_id) do
-      {:ok, mem} -> mem.context_id
-      _ -> nil
-    end
+    context_id =
+      case Memory.get(memory_id) do
+        {:ok, mem} -> mem.context_id
+        _ -> nil
+      end
 
     case Memory.delete(memory_id) do
       {:ok, _res} ->
-        if context_id, do: DiwaAgent.CVC.record_commit(context_id, "antigravity", memory_id, "Deleted memory")
+        if context_id,
+          do: DiwaAgent.CVC.record_commit(context_id, "antigravity", memory_id, "Deleted memory")
+
         success_response("✓ Memory '#{memory_id}' deleted successfully (soft-delete).")
 
       {:error, :not_found} ->
@@ -502,7 +548,9 @@ defmodule DiwaAgent.Tools.Executor do
 
     case Memory.rollback(mid, vid, %{actor: actor, reason: reason}) do
       {:ok, memory} ->
-        success_response("✓ Memory #{mid} rolled back successfully to version #{vid}.\n\nCurrent content length: #{String.length(memory.content)} characters.")
+        success_response(
+          "✓ Memory #{mid} rolled back successfully to version #{vid}.\n\nCurrent content length: #{String.length(memory.content)} characters."
+        )
 
       {:error, reason} ->
         error_response("Rollback failed: #{inspect(reason)}")
@@ -555,11 +603,13 @@ defmodule DiwaAgent.Tools.Executor do
   def execute("list_conflicts", %{"context_id" => context_id} = _args) do
     # Support filtering options
     opts = []
-    
+
     case DiwaAgent.Conflict.Engine.detect_conflicts(context_id, opts) do
       {:ok, conflicts} ->
         if conflicts == [] do
-          success_response("No knowledge collisions detected in this context. Everything is consistent! ✨")
+          success_response(
+            "No knowledge collisions detected in this context. Everything is consistent! ✨"
+          )
         else
           list =
             conflicts
@@ -574,7 +624,7 @@ defmodule DiwaAgent.Tools.Executor do
           #{list}
           """)
         end
-        
+
       {:error, reason} ->
         error_response("Error detecting conflicts: #{inspect(reason)}")
     end
@@ -583,10 +633,10 @@ defmodule DiwaAgent.Tools.Executor do
   def execute("resolve_conflict", %{"context_id" => context_id} = args) do
     # Extract known params
     params = Map.take(args, ["strategy", "keep_ids", "discard_ids", "reason"])
-    
+
     case DiwaAgent.Conflict.Engine.resolve_conflict(context_id, params) do
       {:ok, result} ->
-        format_resolution_result(result) 
+        format_resolution_result(result)
         |> success_response()
 
       {:error, reason} ->
@@ -601,9 +651,6 @@ defmodule DiwaAgent.Tools.Executor do
       {:ok, []} ->
         scope = if context_id, do: " in this context", else: ""
         success_response("No memories found matching '#{query}'#{scope}.")
-     
-
-
 
       {:ok, memories} ->
         # Get context name if searching within specific context
@@ -648,13 +695,16 @@ defmodule DiwaAgent.Tools.Executor do
     end
   end
 
-
   def execute("ingest_agent_dir", %{"context_id" => context_id}) do
     # Maintain backward compatibility but use new engine
     case DiwaAgent.ContextBridge.Ingestor.run(context_id, dirs: [".agent"]) do
-      {:ok, stats} -> 
-        success_response("✓ Ingested #{stats.created} new files from .agent directory (Skipped: #{stats.skipped}).")
-      {:error, reason} -> error_response(reason)
+      {:ok, stats} ->
+        success_response(
+          "✓ Ingested #{stats.created} new files from .agent directory (Skipped: #{stats.skipped})."
+        )
+
+      {:error, reason} ->
+        error_response(reason)
     end
   end
 
@@ -810,7 +860,6 @@ defmodule DiwaAgent.Tools.Executor do
         error_response("Error: #{inspect(reason)}")
     end
   end
-
 
   def execute(
         "set_handoff_note",
@@ -1198,23 +1247,23 @@ defmodule DiwaAgent.Tools.Executor do
   def execute("register_agent", %{"name" => name, "role" => role, "capabilities" => caps} = _args) do
     # Convert role string to atom if needed
     role_atom = String.to_atom(role)
-    
+
     attrs = [
-       name: name,
-       role: role_atom,
-       capabilities: caps
+      name: name,
+      role: role_atom,
+      capabilities: caps
     ]
 
     case DiwaAgent.Registry.Server.register(attrs) do
       {:ok, agent} ->
         success_response("""
         ✓ Agent Registered Successfully
-        
+
         Name: #{agent.name}
         Role: #{agent.role}
         ID: #{agent.id}
         """)
-      
+
       error ->
         error_response("Failed to register agent: #{inspect(error)}")
     end
@@ -1227,15 +1276,15 @@ defmodule DiwaAgent.Tools.Executor do
     case DiwaAgent.Delegation.Broker.poll(agent_id) do
       {:ok, []} ->
         success_response("No pending tasks found.")
-      
+
       {:ok, tasks} ->
         count = length(tasks)
-        
-        list = 
+
+        list =
           tasks
-          |> Enum.map(fn t -> 
+          |> Enum.map(fn t ->
             ref = List.first(t.active_files) || "unknown"
-            
+
             """
             • [Ref: #{ref}] Task: #{t.task_definition}
               From: #{t.from_agent_id}
@@ -1243,57 +1292,61 @@ defmodule DiwaAgent.Tools.Executor do
             """
           end)
           |> Enum.join("\n")
-          
+
         success_response("""
         Found #{count} pending task(s):
 
         #{list}
         """)
-        
-       error ->
-         error_response("Error polling tasks: #{inspect(error)}")
+
+      error ->
+        error_response("Error polling tasks: #{inspect(error)}")
     end
   end
 
-  def execute("delegate_task", %{"from_agent_id" => from, "context_id" => _cid, "task_definition" => task_def} = args) do
+  def execute(
+        "delegate_task",
+        %{"from_agent_id" => from, "context_id" => _cid, "task_definition" => task_def} = args
+      ) do
     to_agent = Map.get(args, "to_agent_id")
     constraints = Map.get(args, "constraints", %{})
-    
-    handoff = DiwaAgent.Delegation.Handoff.new(%{
-       delegation_type: "agent",
-       from_agent_id: from,
-       to_agent_id: to_agent, 
-       task_definition: task_def,
-       constraints: constraints
-    })
-    
+
+    handoff =
+      DiwaAgent.Delegation.Handoff.new(%{
+        delegation_type: "agent",
+        from_agent_id: from,
+        to_agent_id: to_agent,
+        task_definition: task_def,
+        constraints: constraints
+      })
+
     if is_nil(to_agent) do
-       error_response("Target agent_id is required for Phase 1.4 MVP delegation.")
+      error_response("Target agent_id is required for Phase 1.4 MVP delegation.")
     else
-       case DiwaAgent.Delegation.Broker.delegate(handoff) do
-         {:ok, ref} ->
-            success_response("""
-            ✓ Task Delegated Successfully
-            
-            Delegation ID: #{ref}
-            Target: #{to_agent}
-            """)
-         
-         {:error, reason} ->
-            error_response("Failed to delegate task: #{inspect(reason)}")
-       end
+      case DiwaAgent.Delegation.Broker.delegate(handoff) do
+        {:ok, ref} ->
+          success_response("""
+          ✓ Task Delegated Successfully
+
+          Delegation ID: #{ref}
+          Target: #{to_agent}
+          """)
+
+        {:error, reason} ->
+          error_response("Failed to delegate task: #{inspect(reason)}")
+      end
     end
   end
 
   def execute("respond_to_delegation", %{"delegation_id" => id, "status" => status} = args) do
-     reason = Map.get(args, "reason", "No reason provided")
-     Logger.info("[Executor] Agent responded to delegation #{id}: #{status} (#{inspect(reason)})")
-     
-     if status == "rejected" do
-       success_response("✓ Rejection logged (Task logic pending implementation).")
-     else
-       success_response("✓ Task accepted. Marking in-progress.")
-     end
+    reason = Map.get(args, "reason", "No reason provided")
+    Logger.info("[Executor] Agent responded to delegation #{id}: #{status} (#{inspect(reason)})")
+
+    if status == "rejected" do
+      success_response("✓ Rejection logged (Task logic pending implementation).")
+    else
+      success_response("✓ Task accepted. Marking in-progress.")
+    end
   end
 
   def execute("complete_delegation", %{"delegation_id" => id, "result_summary" => summary}) do
@@ -1407,11 +1460,9 @@ defmodule DiwaAgent.Tools.Executor do
 
   # Distributed Consensus Tools (Phase 3)
 
-
-
   def execute("get_cluster_status", args) do
     include_metrics = Map.get(args, "include_metrics", false)
-    
+
     case @consensus_module.get_cluster_status(include_metrics: include_metrics) do
       {:ok, status} ->
         # Handle Map or Struct
@@ -1442,26 +1493,28 @@ defmodule DiwaAgent.Tools.Executor do
         Status: #{current_status}
         Cluster Nodes: #{length(nodes)}#{metrics_section}
         """)
-        
+
       {:error, reason} ->
-         error_response("Failed to get cluster status: #{inspect(reason)}")
+        error_response("Failed to get cluster status: #{inspect(reason)}")
     end
   end
 
   def execute("get_byzantine_nodes", args) do
     min_level = Map.get(args, "min_suspicion_level", "medium")
-    
+
     case @consensus_module.get_byzantine_nodes(min_suspicion_level: min_level) do
       {:ok, nodes} ->
         # nodes is list of %{node_id: ..., suspicion_level: ...}
         if nodes == [] do
           success_response("✅ No Byzantine nodes detected. Cluster is healthy.")
         else
-          list = Enum.map(nodes, fn n -> 
-             node_id = n[:node_id] || n["node_id"]
-             level = n[:suspicion_level] || n["suspicion_level"]
-             "- #{inspect(node_id)} (#{level})" 
-          end) |> Enum.join("\n")
+          list =
+            Enum.map(nodes, fn n ->
+              node_id = n[:node_id] || n["node_id"]
+              level = n[:suspicion_level] || n["suspicion_level"]
+              "- #{inspect(node_id)} (#{level})"
+            end)
+            |> Enum.join("\n")
 
           success_response("""
           ⚠️ Byzantine Nodes Detected:
@@ -1469,7 +1522,7 @@ defmodule DiwaAgent.Tools.Executor do
           #{list}
           """)
         end
-        
+
       {:error, reason} ->
         error_response("Failed to list byzantine nodes: #{inspect(reason)}")
     end
@@ -1478,133 +1531,143 @@ defmodule DiwaAgent.Tools.Executor do
   # --- Conflict Arbitration (Phase 3) ---
 
   def execute("get_conflict_threshold", %{"context_id" => _context_id} = args) do
-     domain = Map.get(args, "domain", "general")
-     
-     threshold = DiwaAgent.Conflict.AdaptiveThreshold.calculate(domain: domain)
-     
-     success_response("""
-     Conflict Threshold for '#{domain}': #{threshold}
-     
-     Base: #{DiwaAgent.Conflict.AdaptiveThreshold.calculate(domain: domain, performance_adj: 0.0, safety_level: 0)}
-     Safety Modifier applied.
-     """)
+    domain = Map.get(args, "domain", "general")
+
+    threshold = DiwaAgent.Conflict.AdaptiveThreshold.calculate(domain: domain)
+
+    success_response("""
+    Conflict Threshold for '#{domain}': #{threshold}
+
+    Base: #{DiwaAgent.Conflict.AdaptiveThreshold.calculate(domain: domain, performance_adj: 0.0, safety_level: 0)}
+    Safety Modifier applied.
+    """)
   end
-  
-  def execute("calibrate_threshold", %{"context_id" => context_id, "conflict_id" => _conflict_id, "feedback_score" => score}) do
+
+  def execute("calibrate_threshold", %{
+        "context_id" => context_id,
+        "conflict_id" => _conflict_id,
+        "feedback_score" => score
+      }) do
     Logger.info("Calibrating threshold for context #{context_id} based on feedback #{score}")
     success_response("Threshold calibration data recorded.")
   end
-  
-  def execute("arbitrate_conflict", %{"context_id" => context_id, "conflict_id" => conflict_id}) do
-     # Delegate to the distributed consensus engine
-     case @consensus_module.arbitrate_conflict(conflict_id, context_id) do
-       {:ok, result} ->
-          success_response("Conflict Arbitration Initiated via Consensus. Result: #{inspect result}")
-          
-       {:error, :redirect, leader} ->
-          error_response("Arbitration request redirected to leader: #{inspect leader}")
 
-       {:error, reason} ->
-          error_response("Arbitration failed: #{inspect reason}")
-     end
+  def execute("arbitrate_conflict", %{"context_id" => context_id, "conflict_id" => conflict_id}) do
+    # Delegate to the distributed consensus engine
+    case @consensus_module.arbitrate_conflict(conflict_id, context_id) do
+      {:ok, result} ->
+        success_response(
+          "Conflict Arbitration Initiated via Consensus. Result: #{inspect(result)}"
+        )
+
+      {:error, :redirect, leader} ->
+        error_response("Arbitration request redirected to leader: #{inspect(leader)}")
+
+      {:error, reason} ->
+        error_response("Arbitration failed: #{inspect(reason)}")
+    end
   end
 
   def execute("record_resolution_feedback", %{"resolution_id" => id, "score" => score}) do
-     Logger.info("Feedback recorded for #{id}: #{score}")
-     success_response("Feedback recorded.")
+    Logger.info("Feedback recorded for #{id}: #{score}")
+    success_response("Feedback recorded.")
   end
-
 
   def execute("verify_context_integrity", %{"context_id" => context_id}) do
     # First verify context exists
     case Context.get(context_id) do
-       {:ok, context} ->
-          case DiwaAgent.CVC.verify_history(context_id) do
-            {:ok, :no_history} ->
-               success_response("Context '#{context.name}' has no version history (it may be new or pre-CVC). Integrity check skipped.")
-            
-            {:ok, last_hash} ->
-               success_response("""
-               ✓ Context Integrity Verified
-               
-               Context: #{context.name}
-               Status: VALID
-               Head Hash: #{last_hash}
-               Blockchain verification successful.
-               """)
-            
-            {:error, :broken_chain, commit} ->
-               error_response("""
-               ⚠️ INTEGRITY CHECK FAILED: Broken Chain
-               
-               The chain of trust is broken at commit:
-               Time: #{commit.inserted_at}
-               Hash: #{commit.hash}
-               Expected Parent: #{commit.parent_hash} (Mismatch)
-               
-               This indicates potential tampering or data corruption.
-               """)
+      {:ok, context} ->
+        case DiwaAgent.CVC.verify_history(context_id) do
+          {:ok, :no_history} ->
+            success_response(
+              "Context '#{context.name}' has no version history (it may be new or pre-CVC). Integrity check skipped."
+            )
 
-            {:error, :invalid_hash, commit} ->
-               error_response("""
-               ⚠️ INTEGRITY CHECK FAILED: Invalid Hash
-               
-               A commit has been modified after creation:
-               Time: #{commit.inserted_at}
-               Stored Hash: #{commit.hash}
-               
-               The content does not match the hash. Data has been tampered with.
-               """)
+          {:ok, last_hash} ->
+            success_response("""
+            ✓ Context Integrity Verified
 
-            {:error, :invalid_signature, commit} ->
-               error_response("""
-               ⚠️ INTEGRITY CHECK FAILED: Invalid Signature
-               
-               Cryptography verification failed for commit:
-               Time: #{commit.inserted_at}
-               Hash: #{commit.hash}
-               
-               The signature does not match the public key and hash. Unauthorized modification detected.
-               """)
-            
-            _ -> error_response("Unknown error during verification.")
-          end
+            Context: #{context.name}
+            Status: VALID
+            Head Hash: #{last_hash}
+            Blockchain verification successful.
+            """)
 
-       {:error, :not_found} ->
-          error_response("Context not found: #{context_id}")
+          {:error, :broken_chain, commit} ->
+            error_response("""
+            ⚠️ INTEGRITY CHECK FAILED: Broken Chain
+
+            The chain of trust is broken at commit:
+            Time: #{commit.inserted_at}
+            Hash: #{commit.hash}
+            Expected Parent: #{commit.parent_hash} (Mismatch)
+
+            This indicates potential tampering or data corruption.
+            """)
+
+          {:error, :invalid_hash, commit} ->
+            error_response("""
+            ⚠️ INTEGRITY CHECK FAILED: Invalid Hash
+
+            A commit has been modified after creation:
+            Time: #{commit.inserted_at}
+            Stored Hash: #{commit.hash}
+
+            The content does not match the hash. Data has been tampered with.
+            """)
+
+          {:error, :invalid_signature, commit} ->
+            error_response("""
+            ⚠️ INTEGRITY CHECK FAILED: Invalid Signature
+
+            Cryptography verification failed for commit:
+            Time: #{commit.inserted_at}
+            Hash: #{commit.hash}
+
+            The signature does not match the public key and hash. Unauthorized modification detected.
+            """)
+
+          _ ->
+            error_response("Unknown error during verification.")
+        end
+
+      {:error, :not_found} ->
+        error_response("Context not found: #{context_id}")
     end
   end
+
   # --- Shortcut Interpreter Tools (Phase 4) ---
-  
+
   def execute("execute_shortcut", %{"command" => command, "context_id" => context_id}) do
     DiwaAgent.Shortcuts.Interpreter.process(command, context_id)
   end
 
   def execute("list_shortcuts", _args) do
     shortcuts = DiwaAgent.Shortcuts.Registry.list_shortcuts()
-    
+
     # Format the list nicely
-    formatted = 
+    formatted =
       shortcuts
-      |> Enum.map(fn {cmd, def} -> 
-         "- **/#{cmd}** -> `#{def.tool}` (#{inspect(def.schema)})"
+      |> Enum.map(fn {cmd, def} ->
+        "- **/#{cmd}** -> `#{def.tool}` (#{inspect(def.schema)})"
       end)
       |> Enum.join("\n")
-      
+
     success_response("""
     📋 Available Shortcuts:
-    
+
     #{formatted}
     """)
   end
 
   def execute("register_shortcut_alias", %{"alias_name" => name, "target_tool" => tool} = args) do
     schema = Map.get(args, "args_schema", [])
-    
+
     case DiwaAgent.Shortcuts.Registry.register_alias(name, tool, schema) do
-      :ok -> 
+      :ok ->
         success_response("✓ Shortcut alias '/#{name}' registered for tool '#{tool}'.")
-      {:error, reason} -> 
+
+      {:error, reason} ->
         error_response("Failed to register alias: #{inspect(reason)}")
     end
   end
@@ -1693,19 +1756,30 @@ defmodule DiwaAgent.Tools.Executor do
     Jason.encode!(export, pretty: true)
   end
 
-
-  defp format_hydration(%{handoff: handoff, blockers: blockers, memories: memories, depth: depth, focus: focus}) do
+  defp format_hydration(%{
+         handoff: handoff,
+         blockers: blockers,
+         memories: memories,
+         depth: depth,
+         focus: focus
+       }) do
     handoff_text = if handoff, do: "### 🚀 Latest Handoff\n#{handoff.content}\n", else: ""
-    
-    blocker_text = if Enum.empty?(blockers), do: "", else: """
-    ### ⚠️ Active Blockers
-    #{Enum.map(blockers, fn b -> "• #{b.content}" end) |> Enum.join("\n")}
-    """
 
-    memory_text = if Enum.empty?(memories), do: "", else: """
-    ### 🧠 Relevant Context
-    #{Enum.map(memories, fn m -> "• [#{m.memory_class || "info"}] #{String.slice(m.content, 0, 100)}..." end) |> Enum.join("\n")}
-    """
+    blocker_text =
+      if Enum.empty?(blockers),
+        do: "",
+        else: """
+        ### ⚠️ Active Blockers
+        #{Enum.map(blockers, fn b -> "• #{b.content}" end) |> Enum.join("\n")}
+        """
+
+    memory_text =
+      if Enum.empty?(memories),
+        do: "",
+        else: """
+        ### 🧠 Relevant Context
+        #{Enum.map(memories, fn m -> "• [#{m.memory_class || "info"}] #{String.slice(m.content, 0, 100)}..." end) |> Enum.join("\n")}
+        """
 
     focus_desc = if focus, do: " (Focus: #{inspect(focus)})", else: ""
 
@@ -1733,7 +1807,7 @@ defmodule DiwaAgent.Tools.Executor do
 
   defp format_resolution_result(%{strategy: strategy, resolved_count: count} = res) do
     details = Map.get(res, :details) || []
-    
+
     """
     ✓ Auto-resolution complete (Strategy: #{strategy})
     Resolved #{count} conflicts.
@@ -1763,8 +1837,6 @@ defmodule DiwaAgent.Tools.Executor do
     # Placeholder - would query Ra state machine
     0
   end
-
-
 
   defp error_response(text) do
     %{

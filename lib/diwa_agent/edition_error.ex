@@ -36,7 +36,8 @@ defmodule DiwaAgent.EditionError do
 
   def to_mcp_error(%__MODULE__{} = error, request_id \\ nil) do
     %{
-      code: -32001, # Application error
+      # Application error
+      code: -32001,
       message: error.message,
       data: %{
         error_type: "edition_restriction",

@@ -1,7 +1,7 @@
 defmodule DiwaAgent.Application do
   @moduledoc """
   OTP Application for DiwaAgent.
-  
+
   Starts the supervision tree with:
   - DiwaAgent.Repo (SQLite database)
   - DiwaAgent.Server (MCP stdio server)
@@ -21,7 +21,7 @@ defmodule DiwaAgent.Application do
       # Agent and Shortcut Registries
       DiwaAgent.Registry.Server,
       DiwaAgent.Shortcuts.Registry,
-      
+
       # Transport (Stdio)
       DiwaAgent.Transport.Stdio,
 
@@ -30,17 +30,17 @@ defmodule DiwaAgent.Application do
     ]
 
     opts = [strategy: :one_for_one, name: DiwaAgent.Supervisor]
-    
+
     # Run migrations if configured
     if Application.get_env(:diwa_agent, :auto_migrate, false) do
       migrate()
     end
-    
+
     # Create default organization if configured
     if Application.get_env(:diwa_agent, :create_default_org, false) do
       create_default_org()
     end
-    
+
     Supervisor.start_link(children, opts)
   end
 
@@ -48,7 +48,8 @@ defmodule DiwaAgent.Application do
     # Run migrations on startup (for escript/release mode)
     {:ok, _, _} = Ecto.Migrator.with_repo(DiwaAgent.Repo, &Ecto.Migrator.run(&1, :up, all: true))
   rescue
-    _ -> :ok  # Ignore migration errors on startup
+    # Ignore migration errors on startup
+    _ -> :ok
   end
 
   defp create_default_org do
