@@ -6,8 +6,7 @@ defmodule DiwaAgent.Storage.PgVectorRepo do
 
   import Ecto.Query
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.Memory
-
+  alias DiwaSchema.Core.Memory
   @impl true
   def upsert_embedding(id, vector, _metadata) do
     # Check configured type

@@ -32,8 +32,7 @@ defmodule DiwaAgent.Tools.ExecutorConflictTest do
       }
 
       result = Executor.execute("resolve_conflict", params)
-
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Manual resolution complete"
       assert text =~ "Resolved 1 items"
       assert text =~ m2.id
@@ -64,8 +63,7 @@ defmodule DiwaAgent.Tools.ExecutorConflictTest do
       }
 
       result = Executor.execute("resolve_conflict", params)
-
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Auto-resolution complete"
       assert text =~ "Resolved 1 conflicts"
 

@@ -1,8 +1,7 @@
 defmodule DiwaAgent.Shortcuts.RegistryDBTest do
   use DiwaAgent.DataCase, async: true
   alias DiwaAgent.Shortcuts.Registry
-  alias DiwaAgent.Storage.Schemas.ShortcutAlias
-
+  alias DiwaSchema.Team.ShortcutAlias
   # Since Registry is a named process started by Application, it creates the ETS table globally.
   # However, for DB tests, we need to ensure isolation or handling of shared state in ETS.
   # The Registry uses :diwa_agent_shortcuts_registry which is a named public table.

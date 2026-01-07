@@ -1,5 +1,6 @@
 ExUnit.start()
 {:ok, _} = DiwaAgent.Test.FakeVectorRepo.start_link()
+Mox.defmock(DiwaAgent.Cloud.ClientMock, for: DiwaAgent.Cloud.Client)
 
 # ExUnit.start() is already called at top
 
@@ -17,10 +18,10 @@ defmodule DiwaAgent.TestHelper do
   def setup_test_db do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(DiwaAgent.Repo)
     # Organization check in Context.ex will need this org to exist
-    case DiwaAgent.Repo.get_by(DiwaAgent.Storage.Schemas.Organization, name: "Default") do
+    case DiwaAgent.Repo.get_by(DiwaSchema.Enterprise.Organization, name: "Default") do
       nil ->
-        %DiwaAgent.Storage.Schemas.Organization{}
-        |> DiwaAgent.Storage.Schemas.Organization.changeset(%{name: "Default"})
+        %DiwaSchema.Enterprise.Organization{}
+        |> DiwaSchema.Enterprise.Organization.changeset(%{name: "Default"})
         |> DiwaAgent.Repo.insert!()
 
       org ->

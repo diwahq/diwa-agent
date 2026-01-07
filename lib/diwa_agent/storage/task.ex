@@ -4,7 +4,7 @@ defmodule DiwaAgent.Storage.Task do
   """
   import Ecto.Query
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.Task
+  alias DiwaSchema.Team.Task
 
   def add(context_id, title, description, priority) do
     %Task{}

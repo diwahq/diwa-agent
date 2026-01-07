@@ -6,7 +6,7 @@ defmodule DiwaAgent.Shortcuts.Registry do
   use GenServer
   require Logger
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.ShortcutAlias
+  alias DiwaSchema.Team.ShortcutAlias
 
   # ETS Table Name
   @table :diwa_agent_shortcuts_registry
@@ -87,12 +87,31 @@ defmodule DiwaAgent.Shortcuts.Registry do
     builtins = [
       {"bug", %{tool: "log_incident", schema: [:title, :description, :severity]}},
       {"log", %{tool: "log_progress", schema: [:message]}},
-      {"todo", %{tool: "mcp_diwa_add_requirement", schema: [:title, :description, :priority]}},
-      {"plan", %{tool: "get_project_status", schema: []}}
+      {"todo", %{tool: "add_requirement", schema: [:title, :description, :priority]}},
+      {"plan", %{tool: "get_project_status", schema: []}},
+      {"graph", %{tool: "get_context_graph", schema: [:root_id, :depth, :format]}},
+      
+      # Navigation
+      {"ls", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "list"}}},
+      {"cd", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "list"}}},
+      {"tree", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "tree"}}},
+      {"stat", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "detail"}}},
+      
+      # Advanced UGAT Intelligence
+      {"impact", %{tool: "analyze_impact", schema: [:context_id]}},
+      {"path", %{tool: "find_shortest_path", schema: [:source_context_id, :target_context_id]}},
+      
+      {"list_contexts", %{tool: "list_contexts", schema: [:organization_id, :query]}},
+      
+      # Session Management Shortcuts
+      {"start", %{tool: "start_session", schema: [:actor]}},
+      {"handoff", %{tool: "set_handoff_note", schema: [:summary, :next_steps, :active_files]}},
+      {"resume", %{tool: "get_active_handoff", schema: []}},
+      {"end", %{tool: "end_session", schema: [:summary]}},
+      {"help", %{tool: "list_shortcuts", schema: []}}
     ]
-
-    Enum.each(builtins, fn {name, def} ->
-      :ets.insert(@table, {name, Map.put(def, :type, :builtin)})
+    Enum.each(builtins, fn {name, definition} ->
+      :ets.insert(@table, {name, Map.put(definition, :type, :builtin)})
     end)
   end
 

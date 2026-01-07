@@ -99,7 +99,22 @@ defmodule DiwaAgent.Tools.Definitions do
       end_session(),
       hydrate_context(),
       validate_action(),
-      prune_expired_memories()
+      prune_expired_memories(),
+      
+      # UGAT Tools (Context Intelligence Backbone)
+      detect_context(),
+      bind_context(),
+      unbind_context(),
+      list_bindings(),
+      link_contexts(),
+      unlink_contexts(),
+      get_related_contexts(),
+      get_context_graph(),
+      get_dependency_chain(),
+      get_shortcuts(),
+      navigate_contexts(),
+      analyze_impact(),
+      find_shortest_path()
     ]
   end
 
@@ -128,6 +143,40 @@ defmodule DiwaAgent.Tools.Definitions do
     }
   end
 
+  defp start_session do
+    %{
+      name: "start_session",
+      description: "Detect project context from current directory and retrieve session resume with handoff, pending tasks, and shortcuts",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          path: %{
+            type: "string",
+            description: "Directory path to detect context from. Client should pass actual filesystem path."
+          },
+          git_remote: %{
+            type: "string",
+            description: "Git remote URL. If omitted, auto-detected via 'git remote get-url origin'."
+          },
+          depth: %{
+            type: "string",
+            enum: ["minimal", "standard", "comprehensive"],
+            description: "How much context to retrieve"
+          },
+          actor: %{
+            type: "string",
+            description: "The agent or human starting the session"
+          },
+          context_id: %{
+            type: "string",
+            description: "Direct Context ID (optional override)"
+          }
+        },
+        additionalProperties: false
+      }
+    }
+  end
+
   defp list_contexts do
     %{
       name: "list_contexts",
@@ -138,6 +187,10 @@ defmodule DiwaAgent.Tools.Definitions do
           organization_id: %{
             type: "string",
             description: "Filter contexts by organization UUID"
+          },
+          query: %{
+            type: "string",
+            description: "Optional fuzzy search query to filter contexts by name"
           }
         }
       }
@@ -1351,21 +1404,7 @@ defmodule DiwaAgent.Tools.Definitions do
     }
   end
 
-  defp start_session do
-    %{
-      name: "start_session",
-      description: "Start a new development session for activity tracking.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{type: "string", description: "Target context ID"},
-          actor: %{type: "string", description: "The agent or human starting the session"},
-          metadata: %{type: "object", description: "Additional session metadata"}
-        },
-        required: ["context_id", "actor"]
-      }
-    }
-  end
+
 
   defp log_session_activity do
     %{
@@ -1457,4 +1496,224 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
+
+  # --- UGAT Tools ---
+
+  defp detect_context do
+    %{
+      name: "detect_context",
+      description: "Auto-detect which context to use based on environment (git, path, etc).",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          type: %{
+            type: "string", 
+            description: "The type of binding to check (git_remote, path, env_var)"
+          },
+          value: %{
+            type: "string",
+            description: "The value to check against (e.g. current git remote url)"
+          }
+        },
+        required: ["type", "value"]
+      }
+    }
+  end
+
+  defp bind_context do
+    %{
+      name: "bind_context",
+      description: "Bind a context to a specific environment trigger (e.g. this git repo maps to this context).",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the context"},
+          type: %{type: "string", description: "Binding type (git_remote, path, env_var)"},
+          value: %{type: "string", description: "Trigger value (e.g. git url)"},
+          metadata: %{type: "string", description: "Optional JSON metadata"}
+        },
+        required: ["context_id", "type", "value"]
+      }
+    }
+  end
+
+  defp unbind_context do
+    %{
+      name: "unbind_context",
+      description: "Remove a context binding.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          binding_id: %{type: "string", description: "The UUID of the binding to remove"}
+        },
+        required: ["binding_id"]
+      }
+    }
+  end
+
+  defp list_bindings do
+    %{
+      name: "list_bindings",
+      description: "List all auto-detection bindings for a context.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the context"}
+        },
+        required: ["context_id"]
+      }
+    }
+  end
+
+  defp link_contexts do
+    %{
+      name: "link_contexts",
+      description: "Create a semantic link/relationship between two contexts.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          source_context_id: %{type: "string", description: "The source context UUID"},
+          target_context_id: %{type: "string", description: "The target context UUID"},
+          relationship_type: %{type: "string", description: "Type of relationship (depends_on, relates_to, child_of, blocks)"},
+          metadata: %{type: "string", description: "Optional JSON metadata"}
+        },
+        required: ["source_context_id", "target_context_id", "relationship_type"]
+      }
+    }
+  end
+
+  defp unlink_contexts do
+    %{
+      name: "unlink_contexts",
+      description: "Remove a link between contexts.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          relationship_id: %{type: "string", description: "The UUID of the relationship to remove"}
+        },
+        required: ["relationship_id"]
+      }
+    }
+  end
+
+  defp get_related_contexts do
+    %{
+      name: "get_related_contexts",
+      description: "List related linked contexts.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the context"},
+          direction: %{type: "string", enum: ["outgoing", "incoming", "both"], description: "Direction of relationships"}
+        },
+        required: ["context_id"]
+      }
+    }
+  end
+  defp get_context_graph do
+    %{
+      name: "get_context_graph",
+      description: "Traverse the context graph and return a visualization (Mermaid/JSON).",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          root_id: %{type: "string", description: "The UUID of the root context to start traversal"},
+          depth: %{type: "integer", description: "Maximum depth of traversal (default: 3)"},
+          format: %{
+             type: "string", 
+             enum: ["mermaid", "json", "list"],
+             description: "Output format (default: mermaid)"
+          }
+        },
+        required: ["root_id"]
+      }
+    }
+  end
+
+  defp get_dependency_chain do
+    %{
+      name: "get_dependency_chain",
+      description: "Retrieve a topologically sorted list of dependencies for a context (Build Order).",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the project context"}
+        },
+        required: ["context_id"]
+      }
+    }
+  end
+
+  defp get_shortcuts do
+    %{
+      name: "get_shortcuts",
+      description: "List available registered shortcuts and their definitions.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{
+            type: "string",
+            description: "Optional: Context ID to include in shortcut usage examples"
+          }
+        },
+        required: []
+      }
+    }
+  end
+
+  defp navigate_contexts do
+    %{
+      name: "navigate_contexts",
+      description: "Interactive navigation of the context graph (ls-style). Supports listing, tree view, and detailed inspection.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{
+            type: "string", 
+            description: "The ID of the context you are currently 'inside' (PWD)"
+          },
+          target_path: %{
+            type: "string",
+            description: "Path to navigate to (e.g., '.', '..', 'child_name', or absolute ID)"
+          },
+          mode: %{
+            type: "string", 
+            enum: ["list", "tree", "detail"],
+            description: "View mode: 'list' (ls), 'tree' (tree), 'detail' (stat)"
+          }
+        },
+        required: ["context_id"]
+      }
+    }
+  end
+  defp analyze_impact do
+    %{
+      name: "analyze_impact",
+      description: "Identifies all downstream contexts impacted by a change to the target context.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the project context"}
+        },
+        required: ["context_id"]
+      }
+    }
+  end
+
+  defp find_shortest_path do
+    %{
+      name: "find_shortest_path",
+      description: "Finds the shortest relationship chain between two contexts.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          source_context_id: %{type: "string", description: "Start Context ID"},
+          target_context_id: %{type: "string", description: "End Context ID"}
+        },
+        required: ["source_context_id", "target_context_id"]
+      }
+    }
+  end
 end
+
+

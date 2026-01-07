@@ -31,8 +31,7 @@ defmodule DiwaAgent.Tools.ExecutorConsensusTest do
       end)
 
       result = Executor.execute("get_cluster_status", %{})
-
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Cluster Status"
       assert text =~ "Cluster Name: diwa_agent_consensus"
     end
@@ -44,8 +43,7 @@ defmodule DiwaAgent.Tools.ExecutorConsensusTest do
       end)
 
       result = Executor.execute("get_byzantine_nodes", %{})
-
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "No Byzantine nodes detected"
     end
 
@@ -61,7 +59,7 @@ defmodule DiwaAgent.Tools.ExecutorConsensusTest do
       end)
 
       result = Executor.execute("arbitrate_conflict", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Conflict Arbitration Initiated via Consensus"
     end
   end

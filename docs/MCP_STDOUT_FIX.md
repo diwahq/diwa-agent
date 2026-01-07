@@ -77,6 +77,19 @@ config :logger, :console,
 ].
 ```
 
+### 5. Suppress Mix Compilation Output (`diwa.sh`)
+```bash
+# Ensure Mix doesn't print "Compiling..." to stdout
+export MIX_QUIET=1
+exec mix run ...
+```
+
+### 6. Robust Stdout Writing (`lib/diwa_agent/transport/stdio.ex`)
+```elixir
+# Use binwrite to avoid encoding/device ambiguity
+IO.binwrite(:stdio, json <> "\n")
+```
+
 ## Testing
 
 To verify the fix works:

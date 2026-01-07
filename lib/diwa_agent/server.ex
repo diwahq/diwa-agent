@@ -67,21 +67,21 @@ defmodule DiwaAgent.Server do
 
   defp process_request(%{"method" => "initialize"} = request, state) do
     response = %{
-      jsonrpc: "2.0",
-      id: request["id"],
-      result: %{
-        protocolVersion: "2024-11-05",
-        capabilities: %{
-          tools: %{
-            listChanged: true
+      "jsonrpc" => "2.0",
+      "id" => request["id"],
+      "result" => %{
+        "protocolVersion" => "2024-11-05",
+        "capabilities" => %{
+          "tools" => %{
+            "listChanged" => true
           },
-          prompts: %{
-            listChanged: true
+          "prompts" => %{
+            "listChanged" => true
           }
         },
-        serverInfo: %{
-          name: "diwa",
-          version: "2.0.0"
+        "serverInfo" => %{
+          "name" => "diwa",
+          "version" => "2.0.0"
         }
       }
     }
@@ -100,10 +100,10 @@ defmodule DiwaAgent.Server do
     tools = DiwaAgent.Tools.Definitions.all_tools()
 
     response = %{
-      jsonrpc: "2.0",
-      id: request["id"],
-      result: %{
-        tools: tools
+      "jsonrpc" => "2.0",
+      "id" => request["id"],
+      "result" => %{
+        "tools" => tools
       }
     }
 
@@ -114,10 +114,10 @@ defmodule DiwaAgent.Server do
     prompts = DiwaAgent.Prompts.Workflow.all_prompts()
 
     response = %{
-      jsonrpc: "2.0",
-      id: request["id"],
-      result: %{
-        prompts: prompts
+      "jsonrpc" => "2.0",
+      "id" => request["id"],
+      "result" => %{
+        "prompts" => prompts
       }
     }
 
@@ -136,15 +136,15 @@ defmodule DiwaAgent.Server do
           Logger.error("[DiwaAgent.Server] Prompt execution failed: #{inspect(e)}")
 
           %{
-            content: [%{type: "text", text: "Error executing prompt: #{inspect(e)}"}],
-            isError: true
+            "content" => [%{"type" => "text", "text" => "Error executing prompt: #{inspect(e)}"}],
+            "isError" => true
           }
       end
 
     response = %{
-      jsonrpc: "2.0",
-      id: request["id"],
-      result: result
+      "jsonrpc" => "2.0",
+      "id" => request["id"],
+      "result" => result
     }
 
     {response, state}
@@ -172,16 +172,16 @@ defmodule DiwaAgent.Server do
 
           # For better user experience in basic clients, we return isError=true with message
           %{
-            content: [%{type: "text", text: e.message}],
-            isError: true
+            "content" => [%{"type" => "text", "text" => e.message}],
+            "isError" => true
           }
 
         e ->
           Logger.error("[DiwaAgent.Server] Tool execution crashed: #{inspect(e)}")
 
           %{
-            content: [%{type: "text", text: "Error executing tool: #{inspect(e)}"}],
-            isError: true
+            "content" => [%{"type" => "text", "text" => "Error executing tool: #{inspect(e)}"}],
+            "isError" => true
           }
       catch
         kind, reason ->
@@ -190,15 +190,15 @@ defmodule DiwaAgent.Server do
           )
 
           %{
-            content: [%{type: "text", text: "Error: #{inspect(kind)}: #{inspect(reason)}"}],
-            isError: true
+            "content" => [%{"type" => "text", "text" => "Error: #{inspect(kind)}: #{inspect(reason)}"}],
+            "isError" => true
           }
       end
 
     response = %{
-      jsonrpc: "2.0",
-      id: request["id"],
-      result: result
+      "jsonrpc" => "2.0",
+      "id" => request["id"],
+      "result" => result
     }
 
     {response, state}
@@ -229,11 +229,11 @@ defmodule DiwaAgent.Server do
 
   defp build_error_response(id, code, message) do
     %{
-      jsonrpc: "2.0",
-      id: id,
-      error: %{
-        code: code,
-        message: message
+      "jsonrpc" => "2.0",
+      "id" => id,
+      "error" => %{
+        "code" => code,
+        "message" => message
       }
     }
   end

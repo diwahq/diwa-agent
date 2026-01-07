@@ -4,7 +4,7 @@ defmodule DiwaAgent.Storage.Plan do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.Plan
+  alias DiwaSchema.Team.Plan
 
   def set(context_id, status, completion_pct, notes) do
     case Repo.get_by(Plan, context_id: context_id) do

@@ -23,15 +23,15 @@ defmodule BridgeToolsTest do
           "notes" => "Working on bridge tools"
         })
 
-      assert result.content
-      assert Enum.any?(result.content, fn c -> String.contains?(c.text, "Implementation") end)
+      assert result["content"]
+      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "Implementation") end)
 
       # Get status
       result = Executor.execute("get_project_status", %{"context_id" => ctx.id})
-      assert result.content
+      assert result["content"]
 
-      assert Enum.any?(result.content, fn c ->
-               String.contains?(c.text, "Implementation") and String.contains?(c.text, "45%")
+      assert Enum.any?(result["content"], fn c ->
+               String.contains?(c["text"], "Implementation") and String.contains?(c["text"], "45%")
              end)
     end
 
@@ -47,8 +47,8 @@ defmodule BridgeToolsTest do
           "priority" => "High"
         })
 
-      assert result.content
-      text = hd(result.content).text
+      assert result["content"]
+      text = hd(result["content"])["text"]
       assert String.contains?(text, "SQLite JSON support")
 
       # Extract requirement ID from response
@@ -56,8 +56,8 @@ defmodule BridgeToolsTest do
 
       # Mark complete
       result = Executor.execute("mark_requirement_complete", %{"requirement_id" => req_id})
-      assert result.content
-      assert Enum.any?(result.content, fn c -> String.contains?(c.text, "complete") end)
+      assert result["content"]
+      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "complete") end)
     end
 
     test "record_lesson and search_lessons" do
@@ -72,13 +72,13 @@ defmodule BridgeToolsTest do
           "category" => "Storage"
         })
 
-      assert result.content
-      assert Enum.any?(result.content, fn c -> String.contains?(c.text, "Metadata Filtering") end)
+      assert result["content"]
+      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "Metadata Filtering") end)
 
       # Search lessons
       result = Executor.execute("search_lessons", %{"query" => "LIKE"})
-      assert result.content
-      text = hd(result.content).text
+      assert result["content"]
+      text = hd(result["content"])["text"]
       assert String.contains?(text, "Metadata Filtering") or String.contains?(text, "No lessons")
     end
 
@@ -94,8 +94,8 @@ defmodule BridgeToolsTest do
           "severity" => "Critical"
         })
 
-      assert result.content
-      text = hd(result.content).text
+      assert result["content"]
+      text = hd(result["content"])["text"]
       assert String.contains?(text, "BLOCKER")
 
       # Extract blocker ID
@@ -108,8 +108,8 @@ defmodule BridgeToolsTest do
           "resolution" => "Used koda.sh wrapper script to bypass escript archive limitations"
         })
 
-      assert result.content
-      assert Enum.any?(result.content, fn c -> String.contains?(c.text, "resolved") end)
+      assert result["content"]
+      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "resolved") end)
     end
 
     test "set_handoff_note and get_active_handoff" do
@@ -124,13 +124,13 @@ defmodule BridgeToolsTest do
           "active_files" => ["executor.ex", "definitions.ex"]
         })
 
-      assert result.content
-      assert Enum.any?(result.content, fn c -> String.contains?(c.text, "Handoff") end)
+      assert result["content"]
+      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "Handoff") end)
 
       # Get handoff
       result = Executor.execute("get_active_handoff", %{"context_id" => ctx.id})
-      assert result.content
-      text = hd(result.content).text
+      assert result["content"]
+      text = hd(result["content"])["text"]
       assert String.contains?(text, "Completed implementation")
       assert String.contains?(text, "executor.ex")
     end

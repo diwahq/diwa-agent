@@ -4,7 +4,7 @@ defmodule DiwaAgent.Storage.Organization do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.Organization
+  alias DiwaSchema.Enterprise.Organization
   import Ecto.Query
 
   @doc """

@@ -18,9 +18,14 @@ defmodule DiwaAgent.Shortcuts.Executor do
   """
   def execute(definition, args_list, context_id, executor_mod \\ DiwaAgent.Tools.Executor) do
     with {:ok, args_map} <- map_arguments(definition, args_list, context_id) do
-      # Add context_id implicitly if not present, as most tools need it
-      final_args = Map.put_new(args_map, "context_id", context_id)
-
+      # Apply defaults if present in definition
+      defaults = Map.get(definition, :defaults, %{})
+      # Arguments provided by user override defaults
+      merged_args = Map.merge(defaults, args_map)
+      
+      # Add context_id implicitly if not present
+      final_args = Map.put_new(merged_args, "context_id", context_id)
+      
       Logger.info("Executing shortcut tool: #{definition.tool} args: #{inspect(final_args)}")
       executor_mod.execute(definition.tool, final_args)
     end

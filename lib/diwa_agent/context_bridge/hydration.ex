@@ -27,14 +27,17 @@ defmodule DiwaAgent.ContextBridge.Hydration do
     # 3. Get domain-specific context based on focus and depth
     relevant_memories = get_relevant_context(context_id, focus, depth)
 
-    {:ok,
-     %{
-       handoff: handoff,
-       blockers: blockers,
-       memories: relevant_memories,
-       depth: depth,
-       focus: focus
-     }}
+    # 4. Get available shortcuts
+    shortcuts = DiwaAgent.Shortcuts.Registry.list_shortcuts()
+
+    {:ok, %{
+      handoff: handoff,
+      blockers: blockers,
+      memories: relevant_memories,
+      shortcuts: shortcuts,
+      depth: depth,
+      focus: focus
+    }}
   end
 
   defp get_latest_handoff(context_id) do

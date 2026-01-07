@@ -38,8 +38,8 @@ defmodule DiwaAgent.Server.EditionTest do
     {:ok, response} = DiwaAgent.Server.handle_message(json_request)
 
     # Response keys are atoms
-    assert response.result.isError == true
-    assert hd(response.result.content).text =~ "requires 'enterprise' edition"
+    assert response["result"]["isError"] == true
+    assert hd(response["result"]["content"])["text"] =~ "requires 'enterprise' edition"
   end
 
   test "allows core tool in community edition" do
@@ -63,7 +63,7 @@ defmodule DiwaAgent.Server.EditionTest do
 
     # If it failed, check the message
     if response[:result][:isError] do
-      refute hd(response.result.content).text =~ "requires 'enterprise' edition"
+      refute hd(response["result"]["content"])["text"] =~ "requires 'enterprise' edition"
     end
   end
 end

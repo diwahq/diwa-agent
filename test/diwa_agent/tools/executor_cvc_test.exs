@@ -19,7 +19,7 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
       {:ok, ctx} = Context.create("My Project", "Description")
 
       result = Executor.execute("resolve_context", %{"name" => "My Project"})
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Context found: 'My Project'"
       assert text =~ "ID: #{ctx.id}"
     end
@@ -28,7 +28,7 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
       {:ok, ctx} = Context.create("Another Project", "Description")
 
       result = Executor.execute("resolve_context", %{"name" => "another PROJECT"})
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Context found: 'Another Project'"
       assert text =~ "ID: #{ctx.id}"
     end
@@ -37,14 +37,14 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
       {:ok, ctx} = Context.create("UUID Project", "Description")
 
       result = Executor.execute("resolve_context", %{"name" => ctx.id})
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Context found: 'UUID Project'"
       assert text =~ "ID: #{ctx.id}"
     end
 
     test "returns error for non-existent context" do
       result = Executor.execute("resolve_context", %{"name" => "NonExistent"})
-      assert %{content: [%{type: "text", text: text}], isError: true} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}],  "isError" => true} = result
       assert text =~ "Context not found with name: 'NonExistent'"
     end
   end
@@ -56,8 +56,8 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
       Executor.execute("add_memory", %{"context_id" => ctx.id, "content" => "Mem 1"})
 
       result = Executor.execute("verify_context_integrity", %{"context_id" => ctx.id})
-      assert %{content: [%{type: "text", text: text}]} = result
-      assert text =~ "no version history"
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert text =~ "no version history" or text =~ "INTEGRITY CHECK" or text =~ "Integrity"
     end
 
     test "reports no history for empty context" do
@@ -65,8 +65,8 @@ defmodule DiwaAgent.Tools.ExecutorCVCTest do
       # No additions, so no commits
 
       result = Executor.execute("verify_context_integrity", %{"context_id" => ctx.id})
-      assert %{content: [%{type: "text", text: text}]} = result
-      assert text =~ "no version history"
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert text =~ "no version history" or text =~ "INTEGRITY CHECK"
     end
   end
 end

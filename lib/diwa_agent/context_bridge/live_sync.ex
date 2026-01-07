@@ -5,7 +5,8 @@ defmodule DiwaAgent.ContextBridge.LiveSync do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.{Session, Memory}
+  alias DiwaSchema.Team.Session
+  alias DiwaSchema.Core.Memory
   alias DiwaAgent.Delegation.Handoff
   require Logger
 

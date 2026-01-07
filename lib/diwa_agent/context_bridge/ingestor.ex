@@ -6,7 +6,8 @@ defmodule DiwaAgent.ContextBridge.Ingestor do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.{IngestJob, Memory}
+  alias DiwaSchema.Team.IngestJob
+  alias DiwaSchema.Core.Memory
   alias DiwaAgent.ContextBridge.MemoryClassification
   require Logger
 

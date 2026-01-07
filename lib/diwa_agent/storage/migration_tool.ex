@@ -4,7 +4,9 @@ defmodule DiwaAgent.Storage.MigrationTool do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.{Organization, Context, Memory}
+  alias DiwaSchema.Enterprise.Organization
+  alias DiwaSchema.Core.Context
+  alias DiwaSchema.Core.Memory
   require Logger
 
   @doc """

@@ -95,6 +95,8 @@ mix ecto.setup
 mix run --no-halt
 ```
 
+> ⚠️ **Architecture Note:** This project relies on the `diwa_schema` shared library for Ecto schemas and migrations. Ensure the sibling directory structure is maintained if running from source.
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.

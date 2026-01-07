@@ -21,6 +21,33 @@ defmodule DiwaAgent.Tools.Executor do
 
   Returns an MCP-formatted response.
   """
+  def execute(tool_name, args) when tool_name in ~w(
+      detect_context bind_context unbind_context list_bindings 
+      link_contexts unlink_contexts get_related_contexts get_context_graph get_dependency_chain
+      start_session navigate_contexts
+    ) do
+      DiwaAgent.Tools.Ugat.execute(tool_name, args)
+  end
+
+  def execute("get_shortcuts", %{"context_id" => _cid}) do
+    shortcuts = DiwaAgent.Shortcuts.Registry.list_shortcuts()
+    |> Enum.map(fn {name, def} -> 
+         %{
+           command: "@#{name}",
+           tool: def.tool,
+           description: "Shortcut for #{def.tool}",
+           schema: def[:schema] # May be nil or list
+         }
+       end)
+       
+    response = %{
+      shortcuts: shortcuts,
+      usage: "Call execute_shortcut(command='@...', context_id='...')"
+    }
+    
+    success_response(Jason.encode!(response, pretty: true))
+  end
+
   def execute("create_context", args) when not is_map_key(args, "name") do
     error_response("Error: 'name' parameter is required")
   end
@@ -54,10 +81,39 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("list_contexts", args) do
     organization_id = Map.get(args, "organization_id")
+    query_str = Map.get(args, "query")
+    
     {:ok, contexts} = Context.list(organization_id)
 
+    # Apply fuzzy filtering if query provided
+    {contexts, status_msg} = 
+      if query_str && query_str != "" do
+        scored = 
+          contexts
+          |> Enum.map(fn ctx -> 
+            # Weighted hybrid: exact/substring is best, then Jaro
+            score = cond do
+              String.downcase(ctx.name) == String.downcase(query_str) -> 1.0
+              String.contains?(String.downcase(ctx.name), String.downcase(query_str)) -> 0.9
+              true -> DiwaAgent.Utils.Fuzzy.jaro_winkler(query_str, ctx.name)
+            end
+            {ctx, score}
+          end)
+          |> Enum.filter(fn {_, score} -> score >= 0.6 end)
+          |> Enum.sort_by(fn {_, score} -> score end, :desc)
+          |> Enum.map(&elem(&1, 0))
+          
+        {scored, "Found #{length(scored)} context(s) matching '#{query_str}':"}
+      else
+        {contexts, "Found #{length(contexts)} context(s):"}
+      end
+
     if contexts == [] do
-      success_response("No contexts found. Use create_context to create one.")
+      if query_str do
+        success_response("No contexts found matching '#{query_str}'.")
+      else
+        success_response("No contexts found. Use create_context to create one.")
+      end
     else
       context_list =
         contexts
@@ -68,7 +124,7 @@ defmodule DiwaAgent.Tools.Executor do
         end)
         |> Enum.join("\n\n")
 
-      success_response("Found #{length(contexts)} context(s):\n\n#{context_list}")
+      success_response("#{status_msg}\n\n#{context_list}")
     end
   end
 
@@ -649,49 +705,18 @@ defmodule DiwaAgent.Tools.Executor do
 
     case Memory.search(query, context_id) do
       {:ok, []} ->
-        scope = if context_id, do: " in this context", else: ""
-        success_response("No memories found matching '#{query}'#{scope}.")
+        # Try fuzzy fallback
+        case Memory.fuzzy_search(query, context_id) do
+          {:ok, []} ->
+            scope = if context_id, do: " in this context", else: ""
+            success_response("No memories found matching '#{query}'#{scope}.")
+          
+          {:ok, fuzzy_results} ->
+             format_search_results(fuzzy_results, context_id, query, true)
+        end
 
       {:ok, memories} ->
-        # Get context name if searching within specific context
-        scope_desc =
-          if context_id do
-            case Context.get(context_id) do
-              {:ok, ctx} -> " in '#{ctx.name}'"
-              _ -> " in specified context"
-            end
-          else
-            " across all contexts"
-          end
-
-        # Format results with previews
-        results =
-          memories
-          |> Enum.map(fn mem ->
-            preview = String.slice(mem.content, 0, 150)
-            preview = if String.length(mem.content) > 150, do: preview <> "...", else: preview
-
-            # Get context name for each result
-            context_name =
-              case Context.get(mem.context_id) do
-                {:ok, ctx} -> ctx.name
-                _ -> "Unknown"
-              end
-
-            """
-            • #{preview}
-              Context: #{context_name}
-              ID: #{mem.id}
-              Created: #{mem.inserted_at}
-            """
-          end)
-          |> Enum.join("\n\n")
-
-        success_response("""
-        Found #{length(memories)} result#{if length(memories) == 1, do: "", else: "s"}#{scope_desc}:
-
-        #{results}
-        """)
+        format_search_results(memories, context_id, query, false)
     end
   end
 
@@ -881,10 +906,25 @@ defmodule DiwaAgent.Tools.Executor do
     case list do
       [latest | _] ->
         meta =
-          if is_binary(latest.metadata), do: Jason.decode!(latest.metadata), else: latest.metadata
+          case latest.metadata do
+            s when is_binary(s) -> 
+              case Jason.decode(s) do
+                {:ok, m} -> m
+                _ -> %{}
+              end
+            m when is_map(m) -> m
+            _ -> %{}
+          end
 
-        steps = meta["next_steps"] |> Enum.map(&"- #{&1}") |> Enum.join("\n")
-        files = meta["active_files"] |> Enum.map(&"- #{&1}") |> Enum.join("\n")
+        next_steps_list = Map.get(meta, "next_steps") || []
+        active_files_list = Map.get(meta, "active_files") || []
+        
+        # Ensure lists are actually lists
+        next_steps_list = if is_list(next_steps_list), do: next_steps_list, else: []
+        active_files_list = if is_list(active_files_list), do: active_files_list, else: []
+
+        steps = next_steps_list |> Enum.map(&"- #{&1}") |> Enum.join("\n")
+        files = active_files_list |> Enum.map(&"- #{&1}") |> Enum.join("\n")
 
         success_response("""
         🚀 Session Handoff Briefing:
@@ -1639,35 +1679,51 @@ defmodule DiwaAgent.Tools.Executor do
   # --- Shortcut Interpreter Tools (Phase 4) ---
 
   def execute("execute_shortcut", %{"command" => command, "context_id" => context_id}) do
-    DiwaAgent.Shortcuts.Interpreter.process(command, context_id)
+    case DiwaAgent.Shortcuts.Interpreter.process(command, context_id) do
+      # If it returns a map, it's a successful tool execution (already formatted)
+      %{} = result -> result
+      
+      # If it returns an error tuple, wrap it
+      {:error, reason} -> error_response(reason)
+      
+      # Catch-all
+      other -> error_response("Unexpected result from shortcut interpreter: #{inspect(other)}")
+    end
+  end
+
+  def execute("execute_shortcut", %{"command" => command} = args) do
+    context_id = Map.get(args, "context_id")
+    DiwaAgent.Shortcuts.Interpreter.interpret(command, context_id) # Delegate to our new Interpreter
   end
 
   def execute("list_shortcuts", _args) do
     shortcuts = DiwaAgent.Shortcuts.Registry.list_shortcuts()
+    sorted_shortcuts = Enum.sort_by(shortcuts, fn {cmd, _} -> cmd end)
 
-    # Format the list nicely
-    formatted =
-      shortcuts
-      |> Enum.map(fn {cmd, def} ->
-        "- **/#{cmd}** -> `#{def.tool}` (#{inspect(def.schema)})"
-      end)
-      |> Enum.join("\n")
-
-    success_response("""
-    📋 Available Shortcuts:
-
-    #{formatted}
-    """)
+    formatted = 
+      sorted_shortcuts
+      |> Enum.map(fn {cmd, def} -> 
+         args = 
+           case def.schema do
+             [] -> ""
+             list -> Enum.map(list, &to_string/1) |> Enum.join(" ")
+           end
+         
+         usage = if args == "", do: "/#{cmd}", else: "/#{cmd} <#{args}>"
+         "- #{usage} -> #{def.tool}"
+       end)
+       |> Enum.join("\n")
+       
+    success_response("Available Shortcuts:\n\n" <> formatted <> "\n\nTip: Use / or @ prefix (e.g., /help or @help)")
   end
 
   def execute("register_shortcut_alias", %{"alias_name" => name, "target_tool" => tool} = args) do
     schema = Map.get(args, "args_schema", [])
 
     case DiwaAgent.Shortcuts.Registry.register_alias(name, tool, schema) do
-      :ok ->
-        success_response("✓ Shortcut alias '/#{name}' registered for tool '#{tool}'.")
-
-      {:error, reason} ->
+      :ok -> 
+        success_response("✓ Shortcut alias '#{name}' registered for tool '#{tool}'.")
+      {:error, reason} -> 
         error_response("Failed to register alias: #{inspect(reason)}")
     end
   end
@@ -1756,13 +1812,7 @@ defmodule DiwaAgent.Tools.Executor do
     Jason.encode!(export, pretty: true)
   end
 
-  defp format_hydration(%{
-         handoff: handoff,
-         blockers: blockers,
-         memories: memories,
-         depth: depth,
-         focus: focus
-       }) do
+  defp format_hydration(%{handoff: handoff, blockers: blockers, memories: memories, depth: depth, focus: focus, shortcuts: shortcuts}) do
     handoff_text = if handoff, do: "### 🚀 Latest Handoff\n#{handoff.content}\n", else: ""
 
     blocker_text =
@@ -1781,6 +1831,11 @@ defmodule DiwaAgent.Tools.Executor do
         #{Enum.map(memories, fn m -> "• [#{m.memory_class || "info"}] #{String.slice(m.content, 0, 100)}..." end) |> Enum.join("\n")}
         """
 
+    shortcuts_text = """
+    ### ⌨️ Available Shortcuts
+    #{Enum.map(shortcuts, fn {cmd, _def} -> "• @#{cmd}" end) |> Enum.take(8) |> Enum.join(", ")}#{if length(shortcuts) > 8, do: " ... (@help for more)", else: ""}
+    """
+
     focus_desc = if focus, do: " (Focus: #{inspect(focus)})", else: ""
 
     """
@@ -1789,17 +1844,23 @@ defmodule DiwaAgent.Tools.Executor do
     #{handoff_text}
     #{blocker_text}
     #{memory_text}
+    #{shortcuts_text}
     """
+  end
+
+  defp format_hydration(params) do
+    # Fallback for when shortcuts are not in the map (legacy calls if any)
+    Map.put(params, :shortcuts, []) |> format_hydration()
   end
 
   # Helper functions to format MCP responses
 
   defp success_response(text) do
     %{
-      content: [
+      "content" => [
         %{
-          type: "text",
-          text: String.trim(text)
+          "type" => "text",
+          "text" => String.trim(text)
         }
       ]
     }
@@ -1840,13 +1901,53 @@ defmodule DiwaAgent.Tools.Executor do
 
   defp error_response(text) do
     %{
-      content: [
+      "content" => [
         %{
-          type: "text",
-          text: String.trim(text)
+          "type" => "text",
+          "text" => String.trim(text)
         }
       ],
-      isError: true
+      "isError" => true
     }
   end
+
+  defp format_search_results(memories, context_id, query, is_fuzzy) do
+    # Get context name if searching within specific context
+    scope_desc =
+      if context_id do
+        case Context.get(context_id) do
+          {:ok, ctx} -> " in '#{ctx.name}'"
+          _ -> " in specified context"
+        end
+      else
+        " across all contexts"
+      end
+
+    match_type = if is_fuzzy, do: "fuzzy matches", else: "results"
+
+    # Format results with previews
+    results_list =
+      memories
+      |> Enum.map(fn mem ->
+        preview = String.slice(mem.content, 0, 150)
+        preview = if String.length(mem.content) > 150, do: preview <> "...", else: preview
+
+        # Get context name for each result
+        context_name =
+          case Context.get(mem.context_id) do
+            {:ok, ctx} -> ctx.name
+            _ -> "Unknown"
+          end
+
+        "• [#{context_name}] ID: #{mem.id}\n  #{preview}\n"
+      end)
+      |> Enum.join("\n")
+
+    success_response("""
+    Found #{length(memories)} #{match_type} for '#{query}'#{scope_desc}:
+
+    #{results_list}
+    """)
+  end
+
 end

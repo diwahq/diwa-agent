@@ -23,6 +23,9 @@ defmodule DiwaAgent.Application do
       DiwaAgent.Registry.Server,
       DiwaAgent.Shortcuts.Registry,
 
+      # Cloud Synchronization Worker
+      DiwaAgent.Cloud.SyncWorker,
+
       # Transport (Stdio)
       DiwaAgent.Transport.Stdio,
 

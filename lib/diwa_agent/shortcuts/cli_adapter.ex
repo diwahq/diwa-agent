@@ -27,14 +27,14 @@ defmodule DiwaAgent.Shortcuts.CLIAdapter do
         other -> inspect(other, pretty: true)
       end
 
-    IO.puts("\n✅ SUCCESS:\n")
-    IO.puts(text)
+    IO.puts(:stderr, "\n✅ SUCCESS:\n")
+    IO.puts(:stderr, text)
     :ok
   end
 
   defp format_error(reason) do
-    IO.puts("\n❌ ERROR:\n")
-    IO.puts(inspect(reason))
+    IO.puts(:stderr, "\n❌ ERROR:\n")
+    IO.puts(:stderr, inspect(reason))
     :error
   end
 end

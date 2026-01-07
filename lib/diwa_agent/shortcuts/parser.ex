@@ -15,17 +15,20 @@ defmodule DiwaAgent.Shortcuts.Parser do
 
     cond do
       trimmed == "" -> {:error, :empty_input}
-      not String.starts_with?(trimmed, "/") -> {:error, :missing_slash_prefix}
-      true -> do_tokenize(trimmed)
+      # Support both "/" and "@" as prefix for shortcuts
+      String.starts_with?(trimmed, "/") -> do_tokenize(trimmed, "/")
+      String.starts_with?(trimmed, "@") -> do_tokenize(trimmed, "@")
+      true -> {:error, :missing_prefix}
     end
   end
 
-  defp do_tokenize(input) do
-    # Remove leading slash
-    without_slash = String.slice(input, 1..-1//1)
-
+  defp do_tokenize(input, prefix) do
+    # Remove leading prefix length
+    prefix_len = String.length(prefix)
+    without_prefix = String.slice(input, prefix_len..-1//1)
+    
     # Regex to capture command (first word) and then remainder
-    case Regex.run(~r/^(\S+)(.*)$/s, without_slash) do
+    case Regex.run(~r/^(\S+)(.*)$/s, without_prefix) do
       [_, command, rest] ->
         args = split_args(rest)
         {:ok, command, args}

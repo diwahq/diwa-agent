@@ -8,6 +8,8 @@ config :diwa_agent,
   ace_engine: DiwaAgent.Engines.ACE.StubAdapter,
   conflict_engine: DiwaAgent.Engines.Conflict.StubAdapter,
   cluster_adapter: DiwaAgent.Engines.Cluster.StubAdapter,
+  cloud_adapter: DiwaAgent.Cloud.StubAdapter,
+  cloud_api_url: "https://api.diwa.one",
 
   # Feature flags
   auto_migrate: true,

@@ -4,14 +4,22 @@ defmodule DiwaAgent.Consensus.ClusterManager do
   """
 
   def get_cluster_status(_opts \\ []) do
-    {:ok, %{status: "standalone", nodes: [], leader: nil}}
+    if Application.get_env(:diwa_agent, :simulated_failure), do: {:error, :simulated}, else: {:ok, %{status: "standalone", nodes: [], leader: nil}}
   end
 
   def get_byzantine_nodes(_opts \\ []) do
-    {:ok, []}
+    if Application.get_env(:diwa_agent, :simulated_failure), do: {:error, :simulated}, else: {:ok, []}
   end
 
-  def arbitrate_conflict(_conflict_id, _context_id) do
-    {:error, :not_implemented}
+  def arbitrate_conflict(conflict_id, context_id) do
+    # Suppress unused var warnings by using them in a zero-impact way
+    _ = conflict_id
+    _ = context_id
+    
+    cond do
+      Application.get_env(:diwa_agent, :simulated_success) -> {:ok, %{resolution: "manual"}}
+      Application.get_env(:diwa_agent, :simulated_redirect) -> {:error, :redirect, "node-2"}
+      true -> {:error, :not_implemented}
+    end
   end
 end

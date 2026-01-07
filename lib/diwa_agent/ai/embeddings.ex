@@ -5,7 +5,11 @@ defmodule DiwaAgent.AI.Embeddings do
   """
 
   def generate_embedding(_text) do
-    # Return nil or error in community edition
-    {:error, :not_implemented}
+    if Application.get_env(:diwa_agent, :mock_embeddings) do
+       {:ok, Enum.map(1..1536, fn _ -> 0.1 end)}
+    else
+       # Return nil or error in community edition
+       {:error, :not_implemented}
+    end
   end
 end

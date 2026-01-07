@@ -5,7 +5,7 @@ defmodule DiwaAgent.ContextBridge.MemoryLifecycle do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.Memory
+  alias DiwaSchema.Core.Memory
   import Ecto.Query
   require Logger
 

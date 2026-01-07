@@ -24,7 +24,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("add_memories", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Successfully added 2 of 2"
 
       {:ok, count} = Memory.count(context.id)
@@ -40,7 +40,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("record_decision", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Decision recorded"
 
       {:ok, memories} = Memory.list_by_tag(context.id, "decision")
@@ -57,7 +57,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("record_deployment", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Deployment"
     end
 
@@ -70,7 +70,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("log_incident", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Incident logged"
     end
 
@@ -82,7 +82,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("record_pattern", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Pattern recorded"
     end
 
@@ -95,7 +95,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("record_review", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Review recorded"
     end
 
@@ -106,7 +106,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       args = %{"requirement_id" => req.id, "priority" => "High"}
       result = Executor.execute("prioritize_requirement", args)
 
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "priority updated to High"
 
       {:ok, updated} = Task.get(req.id)
@@ -119,7 +119,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       result =
         Executor.execute("list_by_tag", %{"context_id" => context.id, "tag" => "searchable"})
 
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Tagged Content"
     end
 
@@ -130,7 +130,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       result_md =
         Executor.execute("export_context", %{"context_id" => context.id, "format" => "markdown"})
 
-      assert %{content: [%{type: "text", text: text_md}]} = result_md
+      assert %{ "content" => [%{ "type" => "text",  "text" => text_md}]} = result_md
       assert text_md =~ "# Export: SDLC Executor Test"
       assert text_md =~ "Mem 1"
 
@@ -138,7 +138,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       result_json =
         Executor.execute("export_context", %{"context_id" => context.id, "format" => "json"})
 
-      assert %{content: [%{type: "text", text: text_json}]} = result_json
+      assert %{ "content" => [%{ "type" => "text",  "text" => text_json}]} = result_json
       assert text_json =~ "\"exported_at\""
     end
 
@@ -148,12 +148,12 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
 
       # link_memories
       res_link = Executor.execute("link_memories", %{"parent_id" => p.id, "child_id" => c.id})
-      assert %{content: [%{type: "text", text: text_link}]} = res_link
+      assert %{ "content" => [%{ "type" => "text",  "text" => text_link}]} = res_link
       assert text_link =~ "Linked"
 
       # get_memory_tree
       res_tree = Executor.execute("get_memory_tree", %{"root_id" => p.id})
-      assert %{content: [%{type: "text", text: text_tree}]} = res_tree
+      assert %{ "content" => [%{ "type" => "text",  "text" => text_tree}]} = res_tree
       assert text_tree =~ "Parent"
       assert text_tree =~ "Child"
     end
@@ -167,7 +167,7 @@ defmodule DiwaAgent.Tools.SDLCExecutorTest do
       }
 
       result = Executor.execute("record_analysis_result", args)
-      assert %{content: [%{type: "text", text: text}]} = result
+      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
       assert text =~ "Analysis result"
     end
   end

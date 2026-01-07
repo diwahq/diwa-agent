@@ -3,7 +3,7 @@ defmodule DiwaAgent.Storage.MemoryVersion do
   CRUD operations for memory versions.
   """
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.MemoryVersion
+  alias DiwaSchema.Core.MemoryVersion
   import Ecto.Query
 
   @doc """

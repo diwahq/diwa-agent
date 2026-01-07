@@ -4,7 +4,8 @@ defmodule DiwaAgent.Storage.Context do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.{Context, Organization}
+  alias DiwaSchema.Core.Context
+  alias DiwaSchema.Enterprise.Organization
   import Ecto.Query
   require Logger
 
@@ -33,6 +34,12 @@ defmodule DiwaAgent.Storage.Context do
     %Context{}
     |> Context.changeset(attrs)
     |> Repo.insert()
+    |> case do
+      {:ok, context} ->
+        spawn_cloud_sync_task(context)
+        {:ok, context}
+      error -> error
+    end
   end
 
   @doc """
@@ -89,6 +96,12 @@ defmodule DiwaAgent.Storage.Context do
         context
         |> Context.changeset(updates)
         |> Repo.update()
+        |> case do
+          {:ok, updated} ->
+            spawn_cloud_sync_task(updated)
+            {:ok, updated}
+          error -> error
+        end
     end
   end
 
@@ -186,6 +199,22 @@ defmodule DiwaAgent.Storage.Context do
 
       id ->
         id
+    end
+  end
+  
+  defp spawn_cloud_sync_task(context) do
+    if System.get_env("DIWA_ENABLE_CLOUD_SYNC") == "true" do
+      # Convert context struct to a plain map for JSON serialization
+      payload = %{
+        id: context.id,
+        name: context.name,
+        description: context.description,
+        organization_id: context.organization_id
+      }
+
+      DiwaAgent.Cloud.SyncQueue.enqueue("context", payload)
+    else
+      :ok
     end
   end
 end

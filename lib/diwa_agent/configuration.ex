@@ -6,8 +6,7 @@ defmodule DiwaAgent.Configuration do
   """
 
   alias DiwaAgent.Repo
-  alias DiwaAgent.Storage.Schemas.Secret
-
+  alias DiwaSchema.Enterprise.Secret
   # 32 bytes for AES-256
   @encryption_key Application.compile_env(
                     :diwa_agent,

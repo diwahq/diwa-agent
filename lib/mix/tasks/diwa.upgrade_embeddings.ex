@@ -34,8 +34,7 @@ defmodule Mix.Tasks.DiwaAgent.UpgradeEmbeddings do
 
     import Ecto.Query
     alias DiwaAgent.Repo
-    alias DiwaAgent.Storage.Schemas.Memory
-
+    alias DiwaSchema.Core.Memory
     # Query memories
     query = from(m in Memory)
 

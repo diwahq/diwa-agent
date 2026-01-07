@@ -22,15 +22,12 @@ defmodule DiwaAgent.Storage.SemanticSearchTest do
     {:ok, vec} = DiwaAgent.Test.FakeEmbeddings.generate_embedding(content)
 
     # 2. Insert memory (Postgres)
-    mem =
-      %DiwaAgent.Storage.Schemas.Memory{
-        content: content,
-        context_id: context_id,
-        inserted_at: DateTime.utc_now(),
-        updated_at: DateTime.utc_now()
-      }
-      |> DiwaAgent.Repo.insert!()
-
+    mem = %DiwaSchema.Core.Memory{
+      content: content,
+      context_id: context_id,
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
+    } |> DiwaAgent.Repo.insert!()
     # 3. Register in FakeVectorRepo (In-Memory)
     DiwaAgent.Test.FakeVectorRepo.upsert_embedding(mem.id, vec)
 

@@ -32,7 +32,7 @@ defmodule DiwaAgent.ContextBridge.RuleEnforcement do
     # For now, we search for 'rule' or use memory_class if implemented
     # We check both the new memory_class column and metadata
     import Ecto.Query
-    alias DiwaAgent.Storage.Schemas.Memory, as: MemorySchema
+    alias DiwaSchema.Core.Memory, as: MemorySchema
     alias DiwaAgent.Repo
 
     query =

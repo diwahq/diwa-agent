@@ -16,8 +16,13 @@ defmodule DiwaAgent.Shortcuts.ParserTest do
                Parser.tokenize("/bug \"Big Error\" Critical")
     end
 
-    test "fails without slash" do
-      assert {:error, :missing_slash_prefix} = Parser.tokenize("bug command")
+    test "fails without valid prefix" do
+      assert {:error, :missing_prefix} = Parser.tokenize("bug command")
+    end
+    
+    test "parses with @ prefix" do
+      assert {:ok, "help", []} = Parser.tokenize("@help")
+      assert {:ok, "bug", ["Title"]} = Parser.tokenize("@bug \"Title\"")
     end
   end
 

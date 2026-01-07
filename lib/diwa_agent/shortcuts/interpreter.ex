@@ -30,4 +30,7 @@ defmodule DiwaAgent.Shortcuts.Interpreter do
         {:error, "Shortcut failed: #{inspect(reason)}"}
     end
   end
+  def interpret(input_string, context_id) do
+    process(input_string, context_id)
+  end
 end
