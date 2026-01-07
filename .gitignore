@@ -56,3 +56,7 @@ diwa-*.tar
 # Agent Internal Files (Keep Workflows)
 /.agent/*
 !/.agent/workflows/
+
+# Ignore local diwa_schema (using Hex package)
+/diwa_schema/
+
