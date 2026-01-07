@@ -8,6 +8,7 @@ defmodule DiwaAgent.Application do
   """
 
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
@@ -46,10 +47,20 @@ defmodule DiwaAgent.Application do
 
   defp migrate do
     # Run migrations on startup (for escript/release mode)
-    {:ok, _, _} = Ecto.Migrator.with_repo(DiwaAgent.Repo, &Ecto.Migrator.run(&1, :up, all: true))
-  rescue
-    # Ignore migration errors on startup
-    _ -> :ok
+    # Suppress all output to prevent stdout pollution in MCP protocol
+    Logger.configure(level: :none)
+    
+    try do
+      {:ok, _, _} = Ecto.Migrator.with_repo(DiwaAgent.Repo, &Ecto.Migrator.run(&1, :up, all: true))
+    rescue
+      e ->
+        # Log to stderr only
+        Logger.configure(level: :warning)
+        Logger.error("[DiwaAgent] Migration failed: #{Exception.message(e)}")
+        :ok
+    after
+      Logger.configure(level: :warning)
+    end
   end
 
   defp create_default_org do
