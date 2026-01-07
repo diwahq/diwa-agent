@@ -32,6 +32,8 @@ defmodule DiwaAgent.MixProject do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
+      "ecto.migrate": ["ecto.migrate --migrations-path deps/diwa_schema/priv/repo/migrations"],
+      "ecto.rollback": ["ecto.rollback --migrations-path deps/diwa_schema/priv/repo/migrations"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
@@ -58,19 +60,25 @@ defmodule DiwaAgent.MixProject do
       # Database (SQLite only)
       {:ecto_sql, "~> 3.11"},
       {:ecto_sqlite3, "~> 0.15"},
-
+      {:postgrex, ">= 0.0.0"},
       # JSON
       {:jason, "~> 1.4"},
 
       # UUID
       {:uuid, "~> 1.1"},
 
+      # HTTP Client
+      {:req, "~> 0.4.0"},
+
       # Dev/Test
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mox, "~> 1.0", only: :test},
-      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
+      
+      # Shared Schema
+      {:diwa_schema, "~> 0.1"}
     ]
   end
 
