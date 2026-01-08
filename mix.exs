@@ -61,6 +61,7 @@ defmodule DiwaAgent.MixProject do
       {:ecto_sql, "~> 3.11"},
       {:ecto_sqlite3, "~> 0.15"},
       {:postgrex, ">= 0.0.0"},
+      {:pgvector, "~> 0.3.0"},
       # JSON
       {:jason, "~> 1.4"},
 

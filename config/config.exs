@@ -2,6 +2,9 @@ import Config
 
 config :diwa_agent,
   ecto_repos: [DiwaAgent.Repo],
+  vector_type: Pgvector.Ecto.Vector,
+  engine_adapter: DiwaAgent.Engine.Simple,
+  enable_analysis: true,
 
   # Engine adapters (stub implementations in community edition)
   health_engine: DiwaAgent.Engines.Health.StubAdapter,
@@ -16,6 +19,8 @@ config :diwa_agent,
   create_default_org: true
 
 config :diwa_agent, DiwaAgent.Repo,
+  types: DiwaAgent.PostgrexTypes,
+  migration_primary_key: [name: :id, type: :binary_id],
   database: "priv/diwa_agent.db",
   pool_size: 5
 
