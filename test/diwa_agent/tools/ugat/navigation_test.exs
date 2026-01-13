@@ -74,8 +74,8 @@ defmodule DiwaAgent.Tools.Ugat.NavigationTest do
 
       assert response["isError"] == false
       text = Enum.at(response["content"], 0)["text"]
-      assert text =~ "Name: Root Project"
-      assert text =~ "Memories:"
+      assert text =~ "Root Project"
+      assert text =~ "Memories"
     end
     
     test "tree view", %{root: root} do

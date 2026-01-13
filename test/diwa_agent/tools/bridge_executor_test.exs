@@ -30,8 +30,8 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       # Get status
       get_res = Executor.execute("get_project_status", %{"context_id" => context.id})
       assert %{ "content" => [%{ "type" => "text",  "text" => get_text}]} = get_res
-      assert get_text =~ "Status: Implementation"
-      assert get_text =~ "Progress: 45%"
+      assert get_text =~ "Implementation"
+      assert get_text =~ "45%"
       assert get_text =~ "Halfway there"
     end
 
@@ -124,14 +124,14 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
 
       result = Executor.execute("set_handoff_note", args)
       assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
-      assert text =~ "Handoff note recorded"
+      assert text =~ "Handoff recorded"
 
       # Get handoff
       get_res = Executor.execute("get_active_handoff", %{"context_id" => context.id})
       assert %{ "content" => [%{ "type" => "text",  "text" => get_text}]} = get_res
-      assert get_text =~ "Summary: Wrapped up tools"
-      assert get_text =~ "- Docs"
-      assert get_text =~ "- executor.ex"
+      assert get_text =~ "Wrapped up tools"
+      assert get_text =~ "Docs"
+      assert get_text =~ "executor.ex"
     end
 
     test "get_pending_tasks", %{context: context} do

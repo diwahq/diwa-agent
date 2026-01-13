@@ -338,12 +338,22 @@ defmodule DiwaAgent.Storage.Memory do
 
   def search_text(query_str, context_id \\ nil) do
     with {:ok, valid_context_id} <- validate_context_id(context_id) do
+      adapter = Application.get_env(:diwa_agent, DiwaAgent.Repo)[:adapter]
+
       base_query =
         from(m in Memory,
           where: is_nil(m.deleted_at),
-          where: ilike(m.content, ^"%#{query_str}%"),
           limit: 50
         )
+
+      base_query =
+        if adapter == Ecto.Adapters.Postgres do
+          from(m in base_query, where: ilike(m.content, ^"%#{query_str}%"))
+        else
+          from(m in base_query,
+            where: fragment("lower(?) LIKE ?", m.content, ^"%#{String.downcase(query_str)}%")
+          )
+        end
 
       query =
         if valid_context_id, do: where(base_query, [m], m.context_id == ^valid_context_id), else: base_query

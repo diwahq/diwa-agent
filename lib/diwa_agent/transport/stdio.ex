@@ -25,17 +25,14 @@ defmodule DiwaAgent.Transport.Stdio do
   defp read_loop do
     case IO.read(:stdio, :line) do
       :eof ->
-        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[IN] EOF\n", [:append])
         Logger.info("[DiwaAgent.Transport.Stdio] EOF received, shutting down")
         System.halt(0)
 
       {:error, reason} ->
-        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[IN] ERROR: #{inspect(reason)}\n", [:append])
         Logger.error("[DiwaAgent.Transport.Stdio] Read error: #{inspect(reason)}")
         System.halt(1)
 
       line when is_binary(line) ->
-        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[IN] #{line}", [:append])
         line = String.trim(line)
 
         unless line == "" do
@@ -53,13 +50,11 @@ defmodule DiwaAgent.Transport.Stdio do
           send_response(response)
   
         {:error, reason} ->
-          File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[ERR] #{inspect(reason)}\n", [:append])
           Logger.error("[DiwaAgent.Transport.Stdio] Error handling message: #{inspect(reason)}")
       end
     rescue
       e ->
         msg = "[DiwaAgent.Transport.Stdio] Crash during message handling: #{inspect(e)}"
-        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[CRASH] #{inspect(e)}\n", [:append])
         IO.puts(:stderr, msg)
         Logger.error(msg)
     end
@@ -71,9 +66,6 @@ defmodule DiwaAgent.Transport.Stdio do
     # Use unicode_safe to ensure all characters are properly escaped
     json = Jason.encode!(response, escape: :unicode_safe)
     
-    # Write to log
-    File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[OUT] #{json}\n", [:append])
-
     # Write to standard output
     IO.puts(:standard_io, json)
   rescue

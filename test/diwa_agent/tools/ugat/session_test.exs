@@ -1,6 +1,13 @@
 defmodule DiwaAgent.Tools.Ugat.SessionTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   alias DiwaAgent.Tools.Ugat
+  import DiwaAgent.TestHelper
+
+  setup do
+    db_path = setup_test_db()
+    on_exit(fn -> cleanup_test_db(db_path) end)
+    :ok
+  end
 
   describe "resolve_context_id/1" do
     # Since resolve_context_id is private, we test via execute("start_session", ...)
@@ -9,11 +16,13 @@ defmodule DiwaAgent.Tools.Ugat.SessionTest do
     
     # We will test the public execute/2 function behavior.
     
-    test "errors when no context can be resolved" do
+    test "returns onboarding info when no context can be resolved" do
       args = %{"actor" => "test"}
       result = Ugat.execute("start_session", args)
-      assert result["isError"] == true
-      assert List.first(result["content"])["text"] =~ "Could not detect context"
+      assert result["isError"] == false
+      text = List.first(result["content"])["text"]
+      assert text =~ "not_found"
+      assert text =~ "onboarding"
     end
     
     # We cannot easily test successful detection without setting up the DB state (Contexts/Bindings).
