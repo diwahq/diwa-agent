@@ -15,7 +15,7 @@ config :diwa_agent,
   cloud_api_url: "https://api.diwa.one",
 
   # Feature flags
-  auto_migrate: true,
+  auto_migrate: true,  # Disable to prevent slow startup on escript
   create_default_org: true
 
 config :diwa_agent, DiwaAgent.Repo,

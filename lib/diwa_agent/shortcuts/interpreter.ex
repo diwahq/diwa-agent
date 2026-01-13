@@ -19,7 +19,15 @@ defmodule DiwaAgent.Shortcuts.Interpreter do
   def process(input_string, context_id, executor_mod \\ DiwaAgent.Shortcuts.Executor) do
     with {:ok, command, args} <- Parser.tokenize(input_string),
          {:ok, definition} <- Registry.resolve(command) do
-      executor_mod.execute(definition, args, context_id)
+      
+      result = executor_mod.execute(definition, args, context_id)
+      
+      # If deprecated, prepend a warning to the response
+      if Map.get(definition, :deprecated, false) do
+        add_deprecation_warning(result, command, definition.tool)
+      else
+        result
+      end
     else
       {:error, :not_found} ->
         Logger.warning("Shortcut not found for input: #{String.slice(input_string, 0, 20)}...")
@@ -33,4 +41,11 @@ defmodule DiwaAgent.Shortcuts.Interpreter do
   def interpret(input_string, context_id) do
     process(input_string, context_id)
   end
+
+  defp add_deprecation_warning(%{"content" => [%{"text" => text} | rest]} = resp, command, tool) do
+    warning = "⚠️  Shortcut @#{command} is DEPRECATED. Please use @#{tool} instead.\n\n"
+    
+    Map.put(resp, "content", [%{"type" => "text", "text" => warning <> text} | rest])
+  end
+  defp add_deprecation_warning(other, _command, _tool), do: other
 end

@@ -54,6 +54,13 @@ defmodule DiwaAgent.Registry.Server do
   def get_agent(agent_id) do
     GenServer.call(__MODULE__, {:get_agent, agent_id})
   end
+  
+  @doc """
+  Find agents that possess all required capabilities.
+  """
+  def find_by_capabilities(required_caps) do
+    GenServer.call(__MODULE__, {:find_by_caps, List.wrap(required_caps)})
+  end
 
   # Server Callbacks
 
@@ -112,6 +119,21 @@ defmodule DiwaAgent.Registry.Server do
   @impl true
   def handle_call({:get_agent, agent_id}, _from, state) do
     {:reply, Map.get(state, agent_id), state}
+  end
+
+  @impl true
+  def handle_call({:find_by_caps, required}, _from, state) do
+    required_set = MapSet.new(required)
+
+    matches =
+      state
+      |> Map.values()
+      |> Enum.filter(fn agent ->
+        agent_caps = MapSet.new(agent.capabilities || [])
+        MapSet.subset?(required_set, agent_caps)
+      end)
+
+    {:reply, matches, state}
   end
 
   @impl true

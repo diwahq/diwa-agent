@@ -44,6 +44,7 @@ defmodule DiwaAgent.Tools.Definitions do
       resolve_blocker(),
       set_handoff_note(),
       get_active_handoff(),
+      complete_handoff(),
       get_pending_tasks(),
       get_resume_context(),
       log_progress(),
@@ -64,6 +65,7 @@ defmodule DiwaAgent.Tools.Definitions do
 
       # Agent Coordination (Phase 1.4)
       register_agent(),
+      match_experts(),
       poll_delegated_tasks(),
       delegate_task(),
       respond_to_delegation(),
@@ -114,7 +116,22 @@ defmodule DiwaAgent.Tools.Definitions do
       get_shortcuts(),
       navigate_contexts(),
       analyze_impact(),
-      find_shortest_path()
+      find_shortest_path(),
+
+      # Code Visibility Tools (TANAW Integration)
+      list_directory(),
+      read_file(),
+      search_code(),
+
+      # TALA Tools
+      commit_buffer(),
+      list_pending(),
+      get_client_instructions(),
+      determine_workflow(),
+      queue_handoff_item(),
+ 
+      # UGAT Onboarding
+      confirm_binding()
     ]
   end
 
@@ -170,6 +187,10 @@ defmodule DiwaAgent.Tools.Definitions do
           context_id: %{
             type: "string",
             description: "Direct Context ID (optional override)"
+          },
+          client_type: %{
+            type: "string",
+            description: "Type of client (e.g., 'antigravity') for self-configuration instructions"
           }
         },
         additionalProperties: false
@@ -311,7 +332,9 @@ defmodule DiwaAgent.Tools.Definitions do
           severity: %{
             type: "string",
             description: "Optional severity level (information, low, moderate, high, critical)"
-          }
+          },
+          buffer: %{type: "boolean", description: "If true, buffer the operation for TALA instead of executing immediately", default: false},
+          session_id: %{type: "string", description: "The UUID of the active session (required if buffer=true)"}
         },
         required: ["context_id", "content"]
       }
@@ -505,7 +528,8 @@ defmodule DiwaAgent.Tools.Definitions do
             type: "string",
             enum: ["High", "Medium", "Low"],
             description: "Importance of this requirement"
-          }
+          },
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "title", "description"]
       }
@@ -548,7 +572,8 @@ defmodule DiwaAgent.Tools.Definitions do
           category: %{
             type: "string",
             description: "Category (e.g., Architecture, NIF, DevX, Protocol)"
-          }
+          },
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "title", "content"]
       }
@@ -583,7 +608,8 @@ defmodule DiwaAgent.Tools.Definitions do
             type: "string",
             enum: ["Critical", "Moderate"],
             description: "How badly this blocker is affecting the project"
-          }
+          },
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "title", "description"]
       }
@@ -632,7 +658,8 @@ defmodule DiwaAgent.Tools.Definitions do
             type: "array",
             items: %{type: "string"},
             description: "List of files that were primarily being edited"
-          }
+          },
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "summary", "next_steps"]
       }
@@ -650,6 +677,26 @@ defmodule DiwaAgent.Tools.Definitions do
           context_id: %{type: "string", description: "The UUID of the project context"}
         },
         required: ["context_id"]
+      }
+    }
+  end
+
+  defp complete_handoff do
+    %{
+      name: "complete_handoff",
+      description: "Mark a handoff as completed and acknowledge next steps.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the project context"},
+          handoff_id: %{type: "string", description: "The ID of the handoff memory"},
+          status: %{
+            type: "string",
+            enum: ["completed", "rejected"],
+            description: "Outcome of the handoff"
+          }
+        },
+        required: ["context_id", "handoff_id"]
       }
     }
   end
@@ -696,7 +743,8 @@ defmodule DiwaAgent.Tools.Definitions do
         properties: %{
           context_id: %{type: "string", description: "The UUID of the project context"},
           message: %{type: "string", description: "Progress message or status update"},
-          tags: %{type: "string", description: "Optional comma-separated tags"}
+          tags: %{type: "string", description: "Optional comma-separated tags"},
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "message"]
       }
@@ -714,7 +762,8 @@ defmodule DiwaAgent.Tools.Definitions do
           context_id: %{type: "string", description: "The UUID of the project context"},
           decision: %{type: "string", description: "The decision made"},
           rationale: %{type: "string", description: "Why this decision was made"},
-          alternatives: %{type: "string", description: "What other options were considered"}
+          alternatives: %{type: "string", description: "What other options were considered"},
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "decision", "rationale"]
       }
@@ -757,7 +806,8 @@ defmodule DiwaAgent.Tools.Definitions do
             enum: ["critical", "high", "moderate", "low"],
             description: "How bad the incident is"
           },
-          external_ref: %{type: "string", description: "Link to monitoring dashboard or ticket"}
+          external_ref: %{type: "string", description: "Link to monitoring dashboard or ticket"},
+          buffer: %{type: "boolean", description: "If true, buffer for TALA", default: false}
         },
         required: ["context_id", "title", "description", "severity"]
       }
@@ -1021,6 +1071,24 @@ defmodule DiwaAgent.Tools.Definitions do
           }
         },
         required: ["name", "role", "capabilities"]
+      }
+    }
+  end
+
+  defp match_experts do
+    %{
+      name: "match_experts",
+      description: "Find available agents with specific capabilities.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          capabilities: %{
+            type: "array",
+            items: %{type: "string"},
+            description: "List of required capability tokens"
+          }
+        },
+        required: ["capabilities"]
       }
     }
   end
@@ -1714,6 +1782,216 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
+
+  defp commit_buffer do
+    %{
+      name: "commit_buffer",
+      description: "Flush the TALA buffer and execute all pending operations in a single transaction (Transactional Accumulation & Lazy Apply)",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          session_id: %{type: "string", description: "The UUID of the active session"}
+        },
+        required: ["session_id"]
+      }
+    }
+  end
+
+  defp list_pending do
+    %{
+      name: "list_pending",
+      description: "List all operations currently buffered in TALA for the session",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          session_id: %{type: "string", description: "The UUID of the active session"}
+        },
+        required: ["session_id"]
+      }
+    }
+  end
+
+
+
+  defp get_client_instructions do
+    %{
+      name: "get_client_instructions",
+      description: "Retrieve system prompt snippets for MCP clients to self-configure DIWA conventions (shortcuts, session workflow).",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          client_type: %{
+            type: "string",
+            description: "Type of client requesting instructions (e.g., 'antigravity', 'cursor', 'claude-desktop')"
+          },
+          sections: %{
+            type: "array",
+            items: %{
+              type: "string",
+              enum: ["shortcuts", "session", "workflow"]
+            },
+            description: "Specific sections of instructions to retrieve"
+          },
+          version: %{
+            type: "string",
+            description: "Instruction set version (default: 'v1')"
+          }
+        },
+        required: []
+      }
+    }
+  end
+
+  defp confirm_binding do
+    %{
+      name: "confirm_binding",
+      description: "Handles user choice for binding a context to a detected path or git remote. Part of the UGAT onboarding flow.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          action: %{
+            type: "string",
+            enum: ["bind", "session_only", "create_new"],
+            description: "Onboarding action to take"
+          },
+          context_id: %{
+            type: "string",
+            description: "Context UUID for 'bind' action"
+          },
+          context_name: %{
+            type: "string",
+            description: "Name for new context if 'create_new' is chosen"
+          },
+          binding_value: %{
+            type: "string",
+            description: "The path or git remote URL to bind"
+          },
+          binding_type: %{
+            type: "string",
+            enum: ["git_remote", "path"],
+            default: "git_remote"
+          },
+          actor: %{
+            type: "string",
+            description: "The agent or human performing the action"
+          }
+        },
+        required: ["action", "binding_value"]
+      }
+    }
+  end
+
+  defp list_directory do
+    %{
+      name: "list_directory",
+      description: "List files and directories at a given path within the context's workspace.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          path: %{
+            type: "string",
+            description: "Relative path from project root (default: '.')"
+          },
+          context_id: %{
+            type: "string",
+            description: "Optional Context ID to determine project root"
+          }
+        }
+      }
+    }
+  end
+
+  defp read_file do
+    %{
+      name: "read_file",
+      description: "Read the contents of a source file within the workspace.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          path: %{
+            type: "string",
+            description: "File path relative to project root"
+          },
+          start_line: %{
+            type: "integer",
+            description: "Optional start line (1-indexed)"
+          },
+          end_line: %{
+            type: "integer",
+            description: "Optional end line (1-indexed)"
+          },
+          context_id: %{
+            type: "string",
+            description: "Optional Context ID to determine project root"
+          }
+        },
+        required: ["path"]
+      }
+    }
+  end
+
+  defp search_code do
+    %{
+      name: "search_code",
+      description: "Search for text/patterns across the codebase using ripgrep.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          query: %{
+            type: "string",
+            description: "Search query or regex"
+          },
+          file_pattern: %{
+            type: "string",
+            description: "Optional glob pattern (e.g., '*.ex')"
+          },
+          context_id: %{
+            type: "string",
+            description: "Optional Context ID to determine project root"
+          }
+        },
+        required: ["query"]
+      }
+    }
+  end
+
+  defp determine_workflow do
+    %{
+      name: "determine_workflow",
+      description: "Auto-detect appropriate workflow based on active spec and task context.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          query: %{
+            type: "string",
+            description: "Optional task query or objective to refine workflow detection"
+          },
+          context_id: %{
+            type: "string",
+            description: "Optional context ID for context-aware workflow routing"
+          }
+        }
+      }
+    }
+  end
+
+  defp queue_handoff_item do
+    %{
+      name: "queue_handoff_item",
+      description: "Queue a specific note or accomplishment to be included in the next handoff note.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the project context"},
+          message: %{type: "string", description: "The item to queue for the next handoff"},
+          category: %{
+            type: "string", 
+            enum: ["accomplishment", "next_step", "blocker", "decision"],
+            default: "accomplishment"
+          }
+        },
+        required: ["context_id", "message"]
+      }
+    }
+  end
 end
-
-

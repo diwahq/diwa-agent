@@ -60,3 +60,6 @@ diwa-*.tar
 # Ignore local diwa_schema (using Hex package)
 /diwa_schema/
 
+
+# Backups
+/priv/backups/

@@ -24,7 +24,7 @@ defmodule DiwaAgent.Server do
   Handle an incoming JSON-RPC message.
   """
   def handle_message(message) do
-    GenServer.call(__MODULE__, {:handle_message, message})
+    GenServer.call(__MODULE__, {:handle_message, message}, :infinity)
   end
 
   # Server Callbacks
@@ -66,11 +66,18 @@ defmodule DiwaAgent.Server do
   end
 
   defp process_request(%{"method" => "initialize"} = request, state) do
+    # Accept client's protocol version preference if compatible
+    _client_protocol = get_in(request, ["params", "protocolVersion"]) || "2024-11-05"
+    
+    # Use the latest stable protocol version we support
+    # 2024-11-05 is the current MCP stable version
+    server_protocol = "2024-11-05"
+    
     response = %{
       "jsonrpc" => "2.0",
       "id" => request["id"],
       "result" => %{
-        "protocolVersion" => "2024-11-05",
+        "protocolVersion" => server_protocol,
         "capabilities" => %{
           "tools" => %{
             "listChanged" => true
@@ -93,6 +100,12 @@ defmodule DiwaAgent.Server do
   # Handle the initialized notification (no response allowed)
   defp process_request(%{"method" => "notifications/initialized"}, state) do
     IO.puts(:stderr, "[DiwaAgent.Server] Client initialized")
+    {nil, state}
+  end
+
+  # Handle the cancelled notification (no response allowed)
+  defp process_request(%{"method" => "notifications/cancelled"}, state) do
+    IO.puts(:stderr, "[DiwaAgent.Server] Request cancelled by client")
     {nil, state}
   end
 
@@ -236,5 +249,11 @@ defmodule DiwaAgent.Server do
         "message" => message
       }
     }
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("[DiwaAgent.Server] Unexpected info message: #{inspect(msg)}")
+    {:noreply, state}
   end
 end

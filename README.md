@@ -16,14 +16,48 @@ Diwa Agent acts as a "long-term memory" and "project manager" for your AI assist
 
 It adheres to the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) standard, making it plug-and-play compatible with modern AI tools.
 
-## ✨ Core Features (OSS)
+## ✨ New in v2.0
+
+We have significantly upgraded the core architecture to support professional workflows:
+
+*   **🔍 UGAT (Universal Git & Agent Tooling)**: Zero-config context detection. The agent automatically detects which project "Context" you are working on based on your `git remote` or file path. No more manual switching.
+*   **🛡️ TALA (Transactional Accumulation)**: "Think first, commit later." The agent buffers complex changes in a transaction buffer to ensure stability before applying them to the memory graph.
+*   **☁️ Hybrid Sync**: Optional integration with Diwa Cloud. Run 100% local for privacy, or connect to an Enterprise instance to share context with your team.
+
+## 🚀 Core Features (OSS)
 
 - **🧠 Persistent Memory**: Store notes, decisions, and technical facts that survive chat session resets.
 - **📂 Context Management**: Organize memories into distinct projects (Contexts).
 - **🔍 Semantic Search**: Find relevant memories using vector embeddings (OpenAI) or keyword search (PostgreSQL).
 - **📋 Project Tracking**: Manage requirements, tasks, and blockers explicitly.
-- **🏎️ High Performance**: Built on Elixir/OTP and PostgreSQL for sub-millisecond response times.
+- **⚡ High Performance**: Built on Elixir/OTP and PostgreSQL for sub-millisecond response times.
 - **🔌 Standard MCP**: Full support for MCP tools and resources.
+
+## 📚 Available Tools
+
+The agent provides the following MCP tools to your AI assistant:
+
+### 🔍 Context Intelligence (UGAT)
+- `detect_context(type, value)`: Auto-detect context from git remote or path.
+- `bind_context(context_id, type, value)`: Bind a directory to a persistent context.
+- `start_session`: Initialize a session with handoff notes and pending tasks.
+
+### 🧠 Memory & Knowledge
+- `add_memory(context_id, content)`
+- `search_memories(query)`
+- `list_memories(context_id)`
+- `record_decision(decision, rationale)`
+
+### 📋 Project Management
+- `set_project_status(status, completion_pct)`
+- `add_requirement(title, description)`
+- `flag_blocker(title, description)`
+- `commit_buffer`: Flush pending TALA operations.
+
+### 🔄 Workflow & Handoff
+- `queue_handoff_item`: Add an accomplishment or note to the next session's handoff.
+- `set_handoff_note(summary, next_steps)`
+- `get_active_handoff(context_id)`
 
 ## 🚀 Quick Start
 
@@ -51,26 +85,6 @@ Add this to your `claude_desktop_config.json`:
   }
 }
 ```
-
-## 📚 Available Tools
-
-The agent provides the following MCP tools to your AI assistant:
-
-### Memory & Context
-- `create_context(name, description)`
-- `add_memory(context_id, content)`
-- `search_memories(query)`
-- `list_memories(context_id)`
-
-### Project Management
-- `set_project_status(status, completion_pct)`
-- `add_requirement(title, description)`
-- `flag_blocker(title, description)`
-- `record_decision(decision, rationale)`
-
-### Workflow
-- `set_handoff_note(summary, next_steps)`
-- `get_active_handoff(context_id)`
 
 ## 🛠️ Development
 

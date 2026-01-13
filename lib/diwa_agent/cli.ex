@@ -24,6 +24,15 @@ defmodule DiwaAgent.CLI do
   end
 
   defp start_server do
+    # Configure Logger to use stderr BEFORE starting the application
+    # This ensures migration errors and other startup logs don't pollute stdout
+    Logger.configure(level: :warning)
+    :logger.add_handler(:default, :logger_std_h, %{
+      config: %{type: :standard_error},
+      formatter: Logger.Formatter.new()
+    })
+    Application.put_env(:logger, :console, device: :standard_error)
+    
     # Perfectly silent startup
     case Application.ensure_all_started(:diwa_agent) do
       {:ok, _} ->

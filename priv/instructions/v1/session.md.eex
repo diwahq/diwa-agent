@@ -1,0 +1,16 @@
+### 🔄 Session Management
+DIWA uses a structured session lifecycle to maintain continuity across different AI interactions.
+
+**1. Starting a Session (`@start`)**
+Always start your work by calling `start_session`. This retrieves the latest handoff note, pending tasks, and active blockers. It ensures you have the full context of what was done by previous agents.
+
+**2. Progress Tracking (`@log`)**
+Record significant technical insights or completion of sub-tasks during the session.
+
+**3. Ending a Session (`@handoff`)**
+When you are finished or need to stop, use `@handoff`.
+- **Summary**: Concise recap of achievements.
+- **Next Steps**: Tactical list for the person/agent picking up the work.
+- **Active Files**: Priority list of files currently being modified.
+
+This protocol prevents "context drift" and duplication of effort.

@@ -49,37 +49,23 @@ defmodule DiwaAgent.Delegation.Broker do
 
   @impl true
   def handle_call({:delegate, %Handoff{} = handoff}, _from, state) do
-    target_id = handoff.to_agent_id
+    # 1. Resolve Target Agent ID
+    target_id = case handoff.to_agent_id do
+      nil -> resolve_target_by_requirements(handoff)
+      id -> id
+    end
 
     if is_nil(target_id) do
-      {:reply, {:error, :missing_target_agent}, state}
+      {:reply, {:error, :no_matching_agent_available}, state}
     else
-      # Assign ID if not present (Handoff struct doesn't have ID by default, relying on map keys?)
-      # Wait, Handoff struct doesn't have an ID field in the struct definition in Phase 1.2!
-      # We usually store them as Memories.
-      # But for the Broker, we need a transient ID to track it in memory.
-      # Let's assume the interaction pattern is:
-      # 1. Agent A calls 'delegate_task' tool -> Creates Memory (Pending) -> Calls Broker.
-      # So we should pass the Memory ID as the handoff reference?
-      # Or strict Handoff struct?
-      # Let's add a virtual ID or assume caller handles persistence.
-      # For Phase 1.3 (Broker), let's track by a generated ref if not provided.
-
-      # Let's assume we pass a struct that might need an ID.
-      # Actually, let's wrap it in a lightweight internal struct or just map.
-
-      # We'll use a unique reference for the broker's lifecycle.
+      # 2. Track Delegation
       ref = UUID.uuid4()
-      # handoff_with_ref = Map.put(handoff, :broker_ref, ref) # Dynamic addition? No, struct.
-      # We can't modify struct. Let's rely on the fact that we should probably store this as a Memory first.
-      # But the Broker is for *active routing*.
-      # Let's store it in `pending` map keyed by ref, and return ref.
-
+      
       updated_queues = Map.update(state.queues, target_id, [ref], fn list -> list ++ [ref] end)
       updated_pending = Map.put(state.pending, ref, handoff)
 
       Logger.info("[Broker] Delegated task to #{target_id} (Ref: #{ref})")
-      {:reply, {:ok, ref}, %{state | queues: updated_queues, pending: updated_pending}}
+      {:reply, {:ok, ref, target_id}, %{state | queues: updated_queues, pending: updated_pending}}
     end
   end
 
@@ -124,5 +110,27 @@ defmodule DiwaAgent.Delegation.Broker do
     # Remove from pending
     updated_pending = Map.delete(state.pending, ref)
     {:reply, :ok, %{state | pending: updated_pending}}
+  end
+
+  # --- Internal Routing Helpers ---
+
+  defp resolve_target_by_requirements(handoff) do
+    constraints = handoff.constraints || %{}
+    required_caps = Map.get(constraints, "required_capabilities") || []
+
+    # 1. Try matching by specific capabilities
+    case DiwaAgent.Registry.Server.find_by_capabilities(required_caps) do
+      [match | _] ->
+        match.id
+
+      [] ->
+        # 2. Fallback to role-based idle discovery if possible
+        # We'd need to know the 'role' required, maybe from task_definition or a constraint
+        # For now, let's look for a :coder if no caps match (standard default)
+        case DiwaAgent.Registry.Server.find_idle_agent(:coder) do
+          nil -> nil
+          agent -> agent.id
+        end
+    end
   end
 end

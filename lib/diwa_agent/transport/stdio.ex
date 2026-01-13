@@ -12,10 +12,10 @@ defmodule DiwaAgent.Transport.Stdio do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  @impl true
   def init(_opts) do
-    Logger.debug("[DiwaAgent.Transport.Stdio] Init called")
-
+    # Configure stdout for reliable UTF-8 transmission
+    :io.setopts(:standard_io, [binary: true, encoding: :utf8])
+    
     # Start reading from stdin
     Task.start_link(fn -> read_loop() end)
 
@@ -25,14 +25,17 @@ defmodule DiwaAgent.Transport.Stdio do
   defp read_loop do
     case IO.read(:stdio, :line) do
       :eof ->
+        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[IN] EOF\n", [:append])
         Logger.info("[DiwaAgent.Transport.Stdio] EOF received, shutting down")
         System.halt(0)
 
       {:error, reason} ->
+        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[IN] ERROR: #{inspect(reason)}\n", [:append])
         Logger.error("[DiwaAgent.Transport.Stdio] Read error: #{inspect(reason)}")
         System.halt(1)
 
       line when is_binary(line) ->
+        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[IN] #{line}", [:append])
         line = String.trim(line)
 
         unless line == "" do
@@ -50,40 +53,38 @@ defmodule DiwaAgent.Transport.Stdio do
           send_response(response)
   
         {:error, reason} ->
+          File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[ERR] #{inspect(reason)}\n", [:append])
           Logger.error("[DiwaAgent.Transport.Stdio] Error handling message: #{inspect(reason)}")
       end
     rescue
       e ->
-        Logger.error("[DiwaAgent.Transport.Stdio] Crash during message handling: #{inspect(e)}")
-        # Construct an error response if we have the ID, but we don't easily have it here since parsing happens in Server.
-        # So we just log to stderr and hope for the best.
+        msg = "[DiwaAgent.Transport.Stdio] Crash during message handling: #{inspect(e)}"
+        File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[CRASH] #{inspect(e)}\n", [:append])
+        IO.puts(:stderr, msg)
+        Logger.error(msg)
     end
   end
 
   defp send_response(nil), do: :ok
 
   defp send_response(response) do
-    # Log the response ID for debugging
-    response_id = Map.get(response, "id")
-    
     # Use unicode_safe to ensure all characters are properly escaped
-    # This prevents "Bad escaped character" errors in strict JSON parsers
     json = Jason.encode!(response, escape: :unicode_safe)
     
-    # Log successful encoding for debugging
-    Logger.debug("[DiwaAgent.Transport.Stdio] Sending response for ID: #{inspect(response_id)}, size: #{byte_size(json)} bytes")
-    
-    # Use binwrite to avoid any encoding/device ambiguity
-    IO.binwrite(:stdio, json <> "\n")
+    # Write to log
+    File.write!("/Users/ei/codes/diwa/diwa-agent/mcp_traffic.log", "[OUT] #{json}\n", [:append])
+
+    # Write to standard output
+    IO.puts(:standard_io, json)
   rescue
-    e ->
+    _ ->
       response_id = Map.get(response, "id")
-      Logger.error("[DiwaAgent.Transport.Stdio] JSON encoding failed for response ID: #{inspect(response_id)}")
-      Logger.error("[DiwaAgent.Transport.Stdio] Error: #{inspect(e)}")
-      Logger.error("[DiwaAgent.Transport.Stdio] Response was: #{inspect(response, limit: 500, printable_limit: 200)}")
+      msg = "[DiwaAgent.Transport.Stdio] JSON encoding failed for response ID: #{inspect(response_id)}"
+      IO.puts(:stderr, msg)
+      Logger.error(msg)
       
-      # Send a minimal error response
+      # Send a minimal error response directly to stdout
       fallback = ~s({"jsonrpc":"2.0","id":#{inspect(response_id)},"error":{"code":-32603,"message":"Internal error: JSON encoding failed"}})
-      IO.binwrite(:stdio, fallback <> "\n")
+      IO.puts(:standard_io, fallback)
   end
 end

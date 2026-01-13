@@ -1,0 +1,16 @@
+### ⚡ DIWA Shortcuts
+You have access to a universal shortcut system. Shortcuts are commands prefixed with `@` that map to powerful MCP tools.
+
+**Common Shortcuts:**
+- `@start`: Initialize a new development session.
+- `@handoff`: Create a resume card for the next AI session.
+- `@log "message"`: Record quick progress updates.
+- `@todo "title" "desc"`: Add a new project requirement.
+- `@ls [path]`: List contexts/files in the ecosystem.
+- `@tree [path]`: View hierarchical structure.
+- `@stat [path]`: Get detailed context info.
+- `@bug "title" "desc"`: Record a technical incident.
+- `@plan`: Review current project status and progress.
+
+**Usage:**
+Always prefer shortcuts for standard operations to maintain consistency across the DIWA ecosystem.

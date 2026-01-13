@@ -29,13 +29,18 @@ case "$1" in
     # exec replaces shell process with Elixir (proper signal handling)
     # 
     # NOTE: Dependencies must be installed beforehand with: mix deps.get
-    # We skip deps check here to ensure instant startup (<1 second)
     # 
-    # Run in foreground. The --no-compile flag ensures we use existing bytecode.
-    # We use the launch script to ensure clean stdout for JSON-RPC readiness.
+    # Mix will automatically start the application, then run the launch script
+    # which keeps the process alive.
+    # Use the pre-compiled escript for maximum silence and performance
+    # This prevents 'mix' from printing any compilation or status messages to stdout
     export DIWA_DISABLE_WEB=true
     export MIX_QUIET=1
-    exec mix run --no-compile --no-start scripts/launch_mcp.exs 2> /tmp/diwa_mcp_stderr.log
+    if [ -f "./diwa" ]; then
+      exec ./diwa start 2>> /tmp/diwa_mcp_stderr.log
+    else
+      exec mix run --no-compile scripts/launch_mcp.exs 2>> /tmp/diwa_mcp_stderr.log
+    fi
     ;;
     
   *)

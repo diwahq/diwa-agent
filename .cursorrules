@@ -5,3 +5,6 @@
 3.  **Exceptions**:
     *   **Troubleshooting**: If you encounter errors, crashes, or blockers while executing the next steps, you are permitted to investigate and fix them.
     *   **User Override**: If the user explicitly asks for a task outside the scope, you may proceed, but you should briefly acknowledge that this is a deviation from the handoff plan if it's a significant context switch.
+
+# Database Safety
+**Database Safety**: NEVER run destructive database commands (mix ecto.reset, mix ecto.drop, DROP TABLE, TRUNCATE) without explicit user confirmation. Always ask first.

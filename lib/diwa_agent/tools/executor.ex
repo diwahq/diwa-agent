@@ -21,12 +21,41 @@ defmodule DiwaAgent.Tools.Executor do
 
   Returns an MCP-formatted response.
   """
+  def execute(tool_name, %{"buffer" => true} = args) do
+    session_id = Map.get(args, "session_id")
+    
+    if is_nil(session_id) do
+       error_response("Error: 'session_id' is required for buffered operations.")
+    else
+      context_id = args["context_id"]
+      actor = args["actor"] || "assistant"
+      
+      # Clean up internal params before buffering
+      params = Map.drop(args, ["buffer", "session_id"])
+
+      case DiwaAgent.Tala.Buffer.push(session_id, context_id, tool_name, params, actor) do
+        {:ok, id} ->
+          success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})")
+        {:error, reason} ->
+          error_response("Failed to buffer operation: #{inspect(reason)}")
+      end
+    end
+  end
+
   def execute(tool_name, args) when tool_name in ~w(
       detect_context bind_context unbind_context list_bindings 
       link_contexts unlink_contexts get_related_contexts get_context_graph get_dependency_chain
-      start_session navigate_contexts
+      start_session navigate_contexts confirm_binding
     ) do
       DiwaAgent.Tools.Ugat.execute(tool_name, args)
+  end
+
+  def execute("determine_workflow", args) do
+    DiwaAgent.Tools.Flow.execute("determine_workflow", args)
+  end
+
+  def execute("queue_handoff_item", args) do
+    execute_queue_handoff_item(args)
   end
 
   def execute("get_shortcuts", %{"context_id" => _cid}) do
@@ -116,13 +145,33 @@ defmodule DiwaAgent.Tools.Executor do
       end
     else
       context_list =
-        contexts
-        |> Enum.map(fn ctx ->
-          desc = if ctx.description, do: " - #{ctx.description}", else: ""
-
-          "• #{ctx.name}#{desc}\n  ID: #{ctx.id}\n  Organization: #{ctx.organization_id}\n  Updated: #{ctx.updated_at}"
-        end)
-        |> Enum.join("\n\n")
+        """
+        <div class="overflow-x-auto my-4">
+          <table class="table table-sm bg-slate-800/20 border border-white/5 whitespace-nowrap">
+            <thead>
+              <tr class="text-slate-400 font-bold border-b border-white/10 uppercase tracking-widest text-[10px]">
+                <th class="p-3">Project Name</th>
+                <th class="p-3">ID</th>
+                <th class="p-3">Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              #{Enum.map(contexts, fn ctx -> 
+                """
+                <tr class="hover:bg-indigo-500/10 transition-colors border-b border-white/5">
+                  <td class="p-3">
+                    <div class="font-bold text-indigo-100">#{ctx.name}</div>
+                    <div class="text-[10px] text-slate-500 max-w-xs truncate italic">#{ctx.description || "No description"}</div>
+                  </td>
+                  <td class="p-3 font-mono text-[10px] text-slate-400 opacity-60">#{String.slice(ctx.id, 0, 8)}...</td>
+                  <td class="p-3 text-[10px] text-slate-500 italic">#{Calendar.strftime(ctx.updated_at, "%Y-%m-%d")}</td>
+                </tr>
+                """
+              end) |> Enum.join("\n")}
+            </tbody>
+          </table>
+        </div>
+        """
 
       success_response("#{status_msg}\n\n#{context_list}")
     end
@@ -423,6 +472,18 @@ defmodule DiwaAgent.Tools.Executor do
       {:ok, count} -> success_response("✓ Pruned #{count} expired memories across all contexts.")
       error -> error_response("Pruning failed: #{inspect(error)}")
     end
+  end
+
+  def execute("get_client_instructions", args) do
+    opts = [
+      client_type: Map.get(args, "client_type", "generic"),
+      sections: Map.get(args, "sections"),
+      version: Map.get(args, "version", "v1")
+    ]
+    |> Enum.filter(fn {_, v} -> v != nil end)
+
+    res = DiwaAgent.Tools.ClientInstructions.get_instructions(opts)
+    success_response(Jason.encode!(res, pretty: true))
   end
 
   def execute("list_memories", %{"context_id" => context_id} = args) do
@@ -751,16 +812,43 @@ defmodule DiwaAgent.Tools.Executor do
     case Plan.get(cid) do
       {:ok, plan} ->
         success_response("""
-        Current Project Status:
+        <div class="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6 shadow-2xl my-4">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-white uppercase tracking-widest">Project Status</h3>
+            <div class="badge badge-primary font-bold">#{plan.status}</div>
+          </div>
+          
+          <div class="mb-6">
+            <div class="flex justify-between text-[10px] uppercase font-bold text-slate-400 mb-2">
+              <span>Progress</span>
+              <span>#{plan.completion_pct}%</span>
+            </div>
+            <div class="w-full bg-white/5 rounded-full h-2 overflow-hidden border border-white/5">
+              <div class="bg-indigo-500 h-full shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-1000" style="width: #{plan.completion_pct}%"></div>
+            </div>
+          </div>
 
-        Status: #{plan.status}
-        Progress: #{plan.completion_pct}%
-        Notes: #{plan.notes}
-        Updated: #{plan.updated_at}
+          <div class="space-y-4">
+            <div class="bg-black/20 p-4 rounded-xl border border-white/5">
+              <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2">Internal Notes</div>
+              <p class="text-sm text-slate-200 leading-relaxed italic">"#{plan.notes}"</p>
+            </div>
+            
+            <div class="flex justify-between text-[8px] font-mono text-slate-600 uppercase tracking-widest">
+              <span>Context: #{String.slice(cid, 0, 8)}</span>
+              <span>Updated: #{Calendar.strftime(plan.updated_at, "%Y-%m-%d %H:%M")}</span>
+            </div>
+          </div>
+        </div>
         """)
 
       {:error, :not_found} ->
-        success_response("No status recorded for this context yet.")
+        success_response("""
+        <div class="p-8 text-center bg-slate-800/20 rounded-xl border border-dashed border-white/10 opacity-50">
+          <div class="mb-1 italic">No status recorded for this context yet.</div>
+          <div class="text-[10px] uppercase tracking-widest">Use set_project_status to begin tracking.</div>
+        </div>
+        """)
     end
   end
 
@@ -886,17 +974,158 @@ defmodule DiwaAgent.Tools.Executor do
     end
   end
 
+  def execute("commit_buffer", %{"session_id" => sid}) do
+    case DiwaAgent.Tala.Buffer.flush(sid) do
+      {:ok, 0} ->
+        success_response("No operations in TALA buffer to commit for session #{sid}.")
+
+      {:ok, ops} ->
+        # Execute all accumulated operations
+        # Note: We don't wrap in Ecto.transaction here because individual execute
+        # calls may have their own transactional logic or side effects (like WIKA notifications).
+        # TALA provides 'Lazy Apply', but atomicity across all tools is a future enhancement (Phase 3).
+        results =
+          Enum.reduce_while(ops, {:ok, []}, fn op, {:ok, acc} ->
+            # Call execute without 'buffer: true' to actually run it
+            res = execute(op.tool_name, op.params)
+
+            if res["isError"] do
+              {:halt,
+               {:error,
+                "Failed to execute #{op.tool_name} (Buffer ID: #{op.id}): #{inspect(res["content"]) || "No error detail"}"}}
+            else
+              {:cont, {:ok, acc ++ [res]}}
+            end
+          end)
+
+        case results do
+          {:ok, list} ->
+            # Mark as committed in DB
+            import Ecto.Query
+            
+            DiwaAgent.Tala.Operation
+            |> where(session_id: ^sid, status: "pending")
+            |> DiwaAgent.Repo.update_all(set: [status: "committed"])
+
+            success_response("✓ Successfully committed #{length(list)} operations from TALA buffer.")
+
+          {:error, reason} ->
+            error_response("Commit failed: #{reason}")
+        end
+
+      {:error, reason} ->
+        error_response("Flush failed: #{inspect(reason)}")
+    end
+  end
+
+  def execute("list_pending", %{"session_id" => sid}) do
+    ops = DiwaAgent.Tala.Buffer.list(sid)
+
+    if Enum.empty?(ops) do
+      success_response("TALA buffer is empty for session #{sid}.")
+    else
+      list =
+        ops
+        |> Enum.map(fn op ->
+          "[#{op.tool_name}] #{Jason.encode!(op.params)}"
+        end)
+        |> Enum.join("\n")
+
+      success_response("Pending TALA operations for session #{sid}:\n\n#{list}")
+    end
+  end
+
+  def execute("discard_buffer", %{"session_id" => sid}) do
+    :ok = DiwaAgent.Tala.Buffer.discard(sid)
+    success_response("✓ TALA buffer discarded for session #{sid}.")
+  end
+
   def execute(
         "set_handoff_note",
         %{"context_id" => cid, "summary" => sum} = args
       ) do
-    # Use Schema for validation/defaults
-    handoff = DiwaAgent.Delegation.Handoff.new(args)
-    metadata = DiwaAgent.Delegation.Handoff.to_metadata(handoff)
+    # 1. Fetch queued items (notes)
+    {queued_entries, queued_ids} =
+      case Memory.list_by_tag(cid, "handoff_item") do
+        {:ok, items} ->
+          # Only take items that haven't been "consumed" (archived or previously included)
+          # We use a simple filter: items newer than last handoff
+          last_handoff_time =
+            case Memory.list_by_type(cid, "handoff") do
+              {:ok, [latest | _]} -> latest.inserted_at
+              _ -> DateTime.from_unix!(0)
+            end
 
-    case Memory.add(cid, sum, Jason.encode!(metadata)) do
-      {:ok, _} -> success_response("✓ Handoff note recorded for next session.")
-      {:error, reason} -> error_response("Failed to set handoff: #{inspect(reason)}")
+          unconsumed = 
+            items
+            |> Enum.filter(fn m -> 
+              DateTime.compare(m.inserted_at, last_handoff_time) == :gt &&
+              !(Map.get(m.metadata || %{}, "consumed", false))
+            end)
+            |> Enum.sort_by(& &1.inserted_at, :asc)
+
+          {unconsumed, Enum.map(unconsumed, & &1.id)}
+
+        _ ->
+          {[], []}
+      end
+
+    # 2. Extract Blockers & Decisions from queued items
+    blockers = 
+      queued_entries 
+      |> Enum.filter(fn m -> Map.get(m.metadata || %{}, "category") == "blocker" end)
+      |> Enum.map(& &1.content)
+
+    decisions = 
+      queued_entries 
+      |> Enum.filter(fn m -> Map.get(m.metadata || %{}, "category") == "decision" end)
+      |> Enum.map(& &1.content)
+
+    # 3. Build Full Summary
+    queued_text = if queued_entries == [] do
+      ""
+    else
+      "\n\n### 📥 Included Updates\n" <>
+        (Enum.map(queued_entries, & "- #{&1.content}") |> Enum.join("\n"))
+    end
+
+    full_summary = sum <> queued_text
+
+    # 4. Use WIKA Handoff Struct for Metadata
+    wika_handoff = %Diwa.Wika.Handoff{
+      summary: sum,
+      next_steps: List.wrap(Map.get(args, "next_steps", [])),
+      active_files: List.wrap(Map.get(args, "active_files", [])),
+      blockers: blockers,
+      decisions: decisions,
+      status: :pending
+    }
+
+    metadata = %{
+      type: "handoff",
+      wika: Map.from_struct(wika_handoff),
+      # Legacy fields for backward compatibility
+      next_steps: wika_handoff.next_steps,
+      active_files: wika_handoff.active_files
+    }
+
+    # 5. Save Handoff Memory
+    case Memory.add(cid, full_summary, %{metadata: metadata}) do
+      {:ok, handoff_mem} ->
+        # 6. Mark consumed items in DB
+        Enum.each(queued_ids, fn id ->
+          case Memory.get(id) do
+            {:ok, m} -> 
+              updated_meta = Map.put(m.metadata || %{}, "consumed", true)
+              Memory.update_metadata(id, updated_meta)
+            _ -> :ok
+          end
+        end)
+
+        success_response("✓ WIKA Handoff recorded (ID: #{String.slice(handoff_mem.id, 0, 8)}). Consumed #{length(queued_ids)} queued items.")
+      
+      {:error, reason} -> 
+        error_response("Failed to set handoff: #{inspect(reason)}")
     end
   end
 
@@ -905,39 +1134,36 @@ defmodule DiwaAgent.Tools.Executor do
 
     case list do
       [latest | _] ->
-        meta =
-          case latest.metadata do
-            s when is_binary(s) -> 
-              case Jason.decode(s) do
-                {:ok, m} -> m
-                _ -> %{}
-              end
-            m when is_map(m) -> m
-            _ -> %{}
-          end
-
-        next_steps_list = Map.get(meta, "next_steps") || []
-        active_files_list = Map.get(meta, "active_files") || []
+        meta = latest.metadata || %{}
+        wika = Map.get(meta, "wika") || %{}
         
-        # Ensure lists are actually lists
-        next_steps_list = if is_list(next_steps_list), do: next_steps_list, else: []
-        active_files_list = if is_list(active_files_list), do: active_files_list, else: []
-
-        steps = next_steps_list |> Enum.map(&"- #{&1}") |> Enum.join("\n")
-        files = active_files_list |> Enum.map(&"- #{&1}") |> Enum.join("\n")
+        # Legacy extract for display
+        next_steps = Map.get(wika, "next_steps") || Map.get(meta, "next_steps") || []
+        active_files = Map.get(wika, "active_files") || Map.get(meta, "active_files") || []
+        blockers = Map.get(wika, "blockers") || []
+        
+        steps_text = next_steps |> Enum.map(&"- #{&1}") |> Enum.join("\n")
+        files_text = active_files |> Enum.map(&"- #{&1}") |> Enum.join("\n")
+        blockers_text = if blockers == [], do: "", else: "\n⚠️ Blockers:\n" <> (blockers |> Enum.map(&"- #{&1}") |> Enum.join("\n"))
 
         success_response("""
-        🚀 Session Handoff Briefing:
-
-        Summary: #{latest.content}
-
-        Next Steps:
-        #{steps}
-
-        Active Files:
-        #{files}
-
+        🚀 Session Handoff Briefing
+        ID: #{latest.id}
+        Status: #{Map.get(wika, "status", "pending") |> to_string() |> String.upcase()}
+        ----------------------------------------
+        
+        #{latest.content}
+        
+        ### 📋 Next Steps:
+        #{if steps_text == "", do: "(None provided)", else: steps_text}
+        
+        ### 📂 Active Files:
+        #{if files_text == "", do: "(None provided)", else: files_text}
+        #{blockers_text}
+        
         Recorded: #{latest.inserted_at}
+        
+        *Tip: Run `@complete #{latest.id}` to acknowledge this handoff.*
         """)
 
       [] ->
@@ -1309,6 +1535,25 @@ defmodule DiwaAgent.Tools.Executor do
     end
   end
 
+  def execute("match_experts", %{"capabilities" => caps}) do
+    case DiwaAgent.Registry.Server.find_by_capabilities(caps) do
+      [] ->
+        success_response(
+          "No agents found with all requested capabilities: #{Enum.join(caps, ", ")}"
+        )
+
+      matches ->
+        text =
+          matches
+          |> Enum.map(fn a ->
+            "- #{a.name} (ID: #{a.id}, Role: #{a.role}) Status: #{a.status} Caps: #{Enum.join(a.capabilities, ",")}"
+          end)
+          |> Enum.join("\n")
+
+        success_response("🔍 Found #{length(matches)} matching experts:\n\n#{text}")
+    end
+  end
+
   def execute("poll_delegated_tasks", %{"agent_id" => agent_id}) do
     # Update heartbeat implicitly
     DiwaAgent.Registry.Server.heartbeat(agent_id)
@@ -1360,21 +1605,17 @@ defmodule DiwaAgent.Tools.Executor do
         constraints: constraints
       })
 
-    if is_nil(to_agent) do
-      error_response("Target agent_id is required for Phase 1.4 MVP delegation.")
-    else
-      case DiwaAgent.Delegation.Broker.delegate(handoff) do
-        {:ok, ref} ->
-          success_response("""
-          ✓ Task Delegated Successfully
+    case DiwaAgent.Delegation.Broker.delegate(handoff) do
+      {:ok, ref, picked_id} ->
+        success_response("""
+        ✓ Task Delegated Successfully
+        
+        Delegation ID: #{ref}
+        Target Agent: #{picked_id}
+        """)
 
-          Delegation ID: #{ref}
-          Target: #{to_agent}
-          """)
-
-        {:error, reason} ->
-          error_response("Failed to delegate task: #{inspect(reason)}")
-      end
+      {:error, reason} ->
+        error_response("Failed to delegate task: #{inspect(reason)}")
     end
   end
 
@@ -1728,6 +1969,107 @@ defmodule DiwaAgent.Tools.Executor do
     end
   end
 
+  def execute("list_directory", args) do
+    path = Map.get(args, "path", ".")
+    context_id = Map.get(args, "context_id")
+    root_path = resolve_root_path(context_id)
+
+    case DiwaAgent.CodeBrowser.list_files(root_path, path) do
+      {:ok, items} ->
+        # Format as a nice list
+        formatted = items
+        |> Enum.map(fn item ->
+          icon = if item.type == :directory, do: "📁", else: "📄"
+          "#{icon} #{item.name} (#{item.path})"
+        end)
+        |> Enum.join("\n")
+
+        success_response("""
+        📂 Directory Listing: #{path}
+        Root: #{root_path}
+        ----------------------------------------
+        #{if formatted == "", do: "(Empty)", else: formatted}
+        """)
+
+      {:error, :access_denied} -> error_response("Access denied: Path is outside of project root.")
+      {:error, reason} -> error_response("Failed to list directory: #{inspect(reason)}")
+    end
+  end
+
+  def execute("read_file", %{"path" => path} = args) do
+    context_id = Map.get(args, "context_id")
+    root_path = resolve_root_path(context_id)
+    opts = [
+      start_line: Map.get(args, "start_line"),
+      end_line: Map.get(args, "end_line")
+    ]
+
+    case DiwaAgent.CodeBrowser.read_file(root_path, path, opts) do
+      {:ok, result} ->
+        success_response("""
+        📄 File: #{result.path}
+        Lines: #{result.total_lines}
+        ----------------------------------------
+        #{result.content}
+        """)
+
+      {:error, :access_denied} -> error_response("Access denied: Path is outside of project root.")
+      {:error, :enoent} -> error_response("File not found: #{path}")
+      {:error, reason} -> error_response("Failed to read file: #{inspect(reason)}")
+    end
+  end
+
+  def execute("search_code", %{"query" => query} = args) do
+    context_id = Map.get(args, "context_id")
+    root_path = resolve_root_path(context_id)
+    opts = [file_pattern: Map.get(args, "file_pattern")]
+
+    case DiwaAgent.CodeBrowser.search_code(root_path, query, opts) do
+      {:ok, []} -> success_response("No matches found for '#{query}'.")
+      {:ok, matches} ->
+        formatted = matches
+        |> Enum.map(fn m ->
+          "#{m.path}:#{m.line}:#{m.column} -> #{m.content}"
+        end)
+        |> Enum.join("\n")
+
+        success_response("""
+        🔍 Search Results for '#{query}':
+        ----------------------------------------
+        #{formatted}
+        """)
+
+      {:error, :ripgrep_not_found} -> error_response("ripgrep (rg) not found on system.")
+      {:error, reason} -> error_response("Search failed: #{inspect(reason)}")
+    end
+  end
+
+  def execute("complete_handoff", %{"context_id" => _cid, "handoff_id" => hid} = args) do
+    status = Map.get(args, "status", "completed")
+    
+    case Memory.get(hid) do
+      {:ok, memory} ->
+        # Update handoff status in WIKA nested metadata
+        meta = memory.metadata || %{}
+        wika = Map.get(meta, "wika", %{}) |> Map.put("status", status)
+        updated_metadata = Map.put(meta, "wika", wika)
+        
+        case Memory.update_metadata(hid, updated_metadata) do
+          {:ok, _} ->
+            # Optionally mark associated items as archived?
+            # For now, just success.
+            success_response("✓ Handoff [#{String.slice(hid, 0, 8)}] marked as #{status}.")
+          {:error, reason} ->
+            error_response("Failed to update handoff: #{inspect(reason)}")
+        end
+        
+      {:error, :not_found} ->
+        error_response("Handoff memory not found: #{hid}")
+      {:error, reason} ->
+        error_response("Error retrieving handoff: #{inspect(reason)}")
+    end
+  end
+
   def execute(tool_name, _args) do
     error_response("Unknown tool: #{tool_name}")
   end
@@ -1950,4 +2292,50 @@ defmodule DiwaAgent.Tools.Executor do
     """)
   end
 
+  defp resolve_root_path(context_id) do
+    case context_id do
+      nil -> File.cwd!()
+      cid ->
+        # Look for a 'path' binding first
+        case DiwaAgent.Storage.Context.Ugat.list_bindings(cid) do
+          bindings when is_list(bindings) ->
+             path_binding = Enum.find(bindings, &(&1.binding_type == "path"))
+             if path_binding do
+               path_binding.value
+             else
+               File.cwd!()
+             end
+          _ -> File.cwd!()
+        end
+    end
+  end
+
+  defp execute_queue_handoff_item(%{"context_id" => context_id, "message" => message} = args) do
+    category = Map.get(args, "category", "accomplishment")
+    actor = Map.get(args, "actor", "assistant")
+    
+    # Handle "this" contextual mapping
+    {final_message, tags} = if message == "this" do
+      case Memory.list_by_tag(context_id, "progress") do
+        {:ok, [latest | _]} -> 
+          {"[AUTO] Worked on: #{String.slice(latest.content, 0, 100)}...", ["handoff_item", "contextual", category]}
+        _ -> 
+          {"[AUTO] Captured contextual session state", ["handoff_item", "contextual", category]}
+      end
+    else
+      {"[#{String.upcase(category)}] #{message}", ["handoff_item", category]}
+    end
+    
+    # Store as a memory with 'handoff_item' tag
+    case Memory.add(context_id, final_message, %{
+      actor: actor,
+      tags: tags,
+      metadata: %{type: "handoff_item", category: category, source: if(message == "this", do: "auto", else: "manual")}
+    }) do
+      {:ok, memory} ->
+        success_response("✓ Handoff item queued: #{final_message} (ID: #{memory.id})")
+      {:error, reason} ->
+        error_response("Failed to queue handoff item: #{inspect(reason)}")
+    end
+  end
 end

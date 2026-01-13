@@ -85,30 +85,53 @@ defmodule DiwaAgent.Shortcuts.Registry do
 
   defp register_builtins do
     builtins = [
+      # Standard tracking
       {"bug", %{tool: "log_incident", schema: [:title, :description, :severity]}},
       {"log", %{tool: "log_progress", schema: [:message]}},
       {"todo", %{tool: "add_requirement", schema: [:title, :description, :priority]}},
-      {"plan", %{tool: "get_project_status", schema: []}},
-      {"graph", %{tool: "get_context_graph", schema: [:root_id, :depth, :format]}},
-      
-      # Navigation
+      {"flag", %{tool: "flag_blocker", schema: [:title, :description, :severity]}},
+
+      # Navigation (Git metaphors)
+      {"checkout", %{tool: "confirm_binding", schema: [:context_name], defaults: %{"action" => "bind"}}},
       {"ls", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "list"}}},
       {"cd", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "list"}}},
       {"tree", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "tree"}}},
       {"stat", %{tool: "navigate_contexts", schema: [:target_path], defaults: %{"mode" => "detail"}}},
       
-      # Advanced UGAT Intelligence
-      {"impact", %{tool: "analyze_impact", schema: [:context_id]}},
-      {"path", %{tool: "find_shortest_path", schema: [:source_context_id, :target_context_id]}},
-      
-      {"list_contexts", %{tool: "list_contexts", schema: [:organization_id, :query]}},
-      
-      # Session Management Shortcuts
+      # Workflow
+      {"flow", %{tool: "determine_workflow", schema: [:query]}},
+
+
+      # Status & History (Status replaces Plan)
+      {"status", %{tool: "get_project_status", schema: []}},
+      {"plan", %{tool: "get_project_status", schema: [], deprecated: true}}, # Deprecated
+      {"history", %{tool: "get_recent_changes", schema: [:limit]}},
+      {"diff", %{tool: "compare_memory_versions", schema: [:version_id_1, :version_id_2]}},
+
+      # Session Management
       {"start", %{tool: "start_session", schema: [:actor]}},
-      {"handoff", %{tool: "set_handoff_note", schema: [:summary, :next_steps, :active_files]}},
-      {"resume", %{tool: "get_active_handoff", schema: []}},
       {"end", %{tool: "end_session", schema: [:summary]}},
-      {"help", %{tool: "list_shortcuts", schema: []}}
+      {"resume", %{tool: "get_active_handoff", schema: []}},
+      {"complete", %{tool: "complete_handoff", schema: [:handoff_id]}},
+      {"handoff", %{tool: "set_handoff_note", schema: [:summary, :next_steps, :active_files]}},
+
+      # AI Agent Coordination
+      {"flow", %{tool: "determine_workflow", schema: [:query]}},
+      {"note", %{tool: "queue_handoff_item", schema: [:message]}},
+      {"pick", %{tool: "claim_work_item", schema: [:title]}},
+      {"commit", %{tool: "create_checkpoint", schema: [:message]}},
+      {"push", %{tool: "complete_work", schema: [:summary]}},
+      {"pull", %{tool: "start_session", schema: [:actor]}}, # Alias for start
+
+      # Knowledge Management
+      {"merge", %{tool: "resolve_conflict", schema: []}},
+      {"revise", %{tool: "update_memory", schema: [:memory_id, :content]}},
+      {"graph", %{tool: "get_context_graph", schema: [:root_id, :depth, :format]}},
+      {"help", %{tool: "list_shortcuts", schema: []}},
+      {"info", %{tool: "get_context", schema: [:context_id]}},
+      {"list_contexts", %{tool: "list_contexts", schema: [:organization_id, :query]}},
+      {"impact", %{tool: "analyze_impact", schema: [:context_id]}},
+      {"path", %{tool: "find_shortest_path", schema: [:source_context_id, :target_context_id]}}
     ]
     Enum.each(builtins, fn {name, definition} ->
       :ets.insert(@table, {name, Map.put(definition, :type, :builtin)})

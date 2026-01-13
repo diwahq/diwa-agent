@@ -1,0 +1,14 @@
+### 🛠️ DIWA Development Workflow
+Follow these standard patterns when building within the DIWA ecosystem:
+
+**1. Fact Extraction (ACE)**
+Use `run_context_scan` to automatically extract architectural facts from the codebase.
+
+**2. Decision Recording**
+Use `record_decision` for any non-obvious architecture or design choice. This populates the persistence layer for future rationalization.
+
+**3. Conflict Resolution**
+Regularly check `list_conflicts` (Patent #3) to ensure that your changes don't contradict existing project knowledge or requirements.
+
+**4. Context Hygiene**
+Keep memories focused and tagged appropriately. Use `prune_expired_memories` if you notice stale information cluttering the context.

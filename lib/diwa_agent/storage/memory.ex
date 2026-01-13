@@ -118,21 +118,29 @@ defmodule DiwaAgent.Storage.Memory do
   List all memories in a context (active only).
   """
   def list(context_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 100)
-    offset = Keyword.get(opts, :offset, 0)
-    include_deleted = Keyword.get(opts, :include_deleted, false)
+    # Validate context_id is a valid UUID before building the query
+    case Ecto.UUID.cast(context_id) do
+      {:ok, valid_uuid} ->
+        limit = Keyword.get(opts, :limit, 100)
+        offset = Keyword.get(opts, :offset, 0)
+        include_deleted = Keyword.get(opts, :include_deleted, false)
 
-    query =
-      from(m in Memory,
-        where: m.context_id == ^context_id,
-        order_by: [desc: m.inserted_at],
-        limit: ^limit,
-        offset: ^offset
-      )
+        query =
+          from(m in Memory,
+            where: m.context_id == ^valid_uuid,
+            order_by: [desc: m.inserted_at],
+            limit: ^limit,
+            offset: ^offset
+          )
 
-    query = if include_deleted, do: query, else: where(query, [m], is_nil(m.deleted_at))
+        query = if include_deleted, do: query, else: where(query, [m], is_nil(m.deleted_at))
 
-    {:ok, Repo.all(query)}
+        {:ok, Repo.all(query)}
+      
+      :error ->
+        Logger.warning("Invalid context_id provided to Memory.list/2: #{inspect(context_id)}")
+        {:error, :invalid_context_id}
+    end
   end
 
   @doc """
@@ -149,6 +157,7 @@ defmodule DiwaAgent.Storage.Memory do
     end
   end
 
+
   defp cast_uuid(nil), do: :error
 
   defp cast_uuid(id) do
@@ -157,6 +166,19 @@ defmodule DiwaAgent.Storage.Memory do
       _ -> :error
     end
   end
+
+  @doc false
+  defp validate_context_id(nil), do: {:ok, nil}
+  
+  defp validate_context_id(context_id) do
+    case Ecto.UUID.cast(context_id) do
+      {:ok, valid_uuid} -> {:ok, valid_uuid}
+      :error -> 
+        Logger.warning("Invalid context_id UUID: #{inspect(context_id)}")
+        {:error, :invalid_context_id}
+    end
+  end
+
 
   @doc """
   Update a memory's content.
@@ -315,96 +337,106 @@ defmodule DiwaAgent.Storage.Memory do
   end
 
   def search_text(query_str, context_id \\ nil) do
-    base_query =
-      from(m in Memory,
-        where: is_nil(m.deleted_at),
-        where: ilike(m.content, ^"%#{query_str}%"),
-        limit: 50
-      )
+    with {:ok, valid_context_id} <- validate_context_id(context_id) do
+      base_query =
+        from(m in Memory,
+          where: is_nil(m.deleted_at),
+          where: ilike(m.content, ^"%#{query_str}%"),
+          limit: 50
+        )
 
-    query =
-      if context_id, do: where(base_query, [m], m.context_id == ^context_id), else: base_query
+      query =
+        if valid_context_id, do: where(base_query, [m], m.context_id == ^valid_context_id), else: base_query
 
-    {:ok, Repo.all(query)}
+      {:ok, Repo.all(query)}
+    end
   end
 
   @doc """
   Fuzzy search fallback using Jaro-Winkler on memory content.
   """
   def fuzzy_search(query_str, context_id \\ nil) do
-    # Only search recent or limited set to avoid performance issues
-    limit = 200
-    base_query = 
-      from(m in Memory, 
-        where: is_nil(m.deleted_at),
-        order_by: [desc: m.inserted_at],
-        limit: ^limit
-      )
+    with {:ok, valid_context_id} <- validate_context_id(context_id) do
+      # Only search recent or limited set to avoid performance issues
+      limit = 200
+      base_query = 
+        from(m in Memory, 
+          where: is_nil(m.deleted_at),
+          order_by: [desc: m.inserted_at],
+          limit: ^limit
+        )
+        
+      query = if valid_context_id, do: where(base_query, [m], m.context_id == ^valid_context_id), else: base_query
+      memories = Repo.all(query)
       
-    query = if context_id, do: where(base_query, [m], m.context_id == ^context_id), else: base_query
-    memories = Repo.all(query)
-    
-    scored = 
-      memories
-      |> Enum.map(fn m -> 
-        # Check both content and optional metadata (like tags/title if any)
-        score = DiwaAgent.Utils.Fuzzy.jaro_winkler(query_str, String.slice(m.content, 0, 100))
-        {m, score}
-      end)
-      |> Enum.filter(fn {_, score} -> score >= 0.65 end)
-      |> Enum.sort_by(fn {_, score} -> score end, :desc)
-      |> Enum.map(&elem(&1, 0))
-      
-    {:ok, scored}
+      scored = 
+        memories
+        |> Enum.map(fn m -> 
+          # Check both content and optional metadata (like tags/title if any)
+          score = DiwaAgent.Utils.Fuzzy.jaro_winkler(query_str, String.slice(m.content, 0, 100))
+          {m, score}
+        end)
+        |> Enum.filter(fn {_, score} -> score >= 0.65 end)
+        |> Enum.sort_by(fn {_, score} -> score end, :desc)
+        |> Enum.map(&elem(&1, 0))
+        
+      {:ok, scored}
+    end
   end
 
   @doc """
   Count total memories in a context.
   """
   def count(context_id) do
-    query = from(m in Memory, where: m.context_id == ^context_id, where: is_nil(m.deleted_at))
-    {:ok, Repo.aggregate(query, :count, :id)}
+    with {:ok, valid_context_id} <- validate_context_id(context_id) do
+      query = from(m in Memory, where: m.context_id == ^valid_context_id, where: is_nil(m.deleted_at))
+      {:ok, Repo.aggregate(query, :count, :id)}
+    end
   end
 
   @doc """
   List memories by type (e.g., 'handoff', 'decision').
   """
   def list_by_type(context_id, type) do
-    # Check configured adapter (defaulting to SQLite path if not Postgres)
-    adapter = Application.get_env(:diwa_agent, DiwaAgent.Repo)[:adapter]
+    with {:ok, valid_context_id} <- validate_context_id(context_id) do
+      # Check configured adapter (defaulting to SQLite path if not Postgres)
+      adapter = Application.get_env(:diwa_agent, DiwaAgent.Repo)[:adapter]
 
-    query =
-      from(m in Memory,
-        where: m.context_id == ^context_id,
-        where: is_nil(m.deleted_at),
-        order_by: [desc: m.inserted_at]
-      )
+      query =
+        from(m in Memory,
+          where: m.context_id == ^valid_context_id,
+          where: is_nil(m.deleted_at),
+          order_by: [desc: m.inserted_at]
+        )
 
-    query = 
-      if adapter == Ecto.Adapters.Postgres do
-        # Postgres JSONB syntax
-        from m in query, where: fragment("?->>'type' = ?", m.metadata, ^type)
-      else
-        # SQLite syntax
-        from m in query, where: fragment("json_extract(?, '$.type') = ?", m.metadata, ^type)
-      end
+      query = 
+        if adapter == Ecto.Adapters.Postgres do
+          # Postgres JSONB syntax
+          from m in query, where: fragment("?->>'type' = ?", m.metadata, ^type)
+        else
+          # SQLite syntax
+          from m in query, where: fragment("json_extract(?, '$.type') = ?", m.metadata, ^type)
+        end
 
-    {:ok, Repo.all(query)}
+      {:ok, Repo.all(query)}
+    end
   end
 
   @doc """
   List memories containing a specific tag.
   """
   def list_by_tag(context_id, tag) do
-    query =
-      from(m in Memory,
-        where: m.context_id == ^context_id,
-        where: is_nil(m.deleted_at),
-        where: ^tag in m.tags,
-        order_by: [desc: m.inserted_at]
-      )
+    with {:ok, valid_context_id} <- validate_context_id(context_id) do
+      query =
+        from(m in Memory,
+          where: m.context_id == ^valid_context_id,
+          where: is_nil(m.deleted_at),
+          where: ^tag in m.tags,
+          order_by: [desc: m.inserted_at]
+        )
 
-    {:ok, Repo.all(query)}
+      {:ok, Repo.all(query)}
+    end
   end
 
   @doc """

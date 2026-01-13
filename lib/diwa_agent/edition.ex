@@ -91,6 +91,7 @@ defmodule DiwaAgent.Edition do
     # Workflow Basic
     "set_handoff_note" => :workflow_basic,
     "get_active_handoff" => :workflow_basic,
+    "complete_handoff" => :workflow_basic,
     "log_progress" => :workflow_basic,
     "get_pending_tasks" => :workflow_basic,
 
@@ -130,6 +131,7 @@ defmodule DiwaAgent.Edition do
 
     # Agents (SINAG Basic - Team)
     "register_agent" => :agents,
+    "match_experts" => :agents,
     "restore_agent" => :agents,
     "poll_delegated_tasks" => :agents,
     "respond_to_delegation" => :agents,

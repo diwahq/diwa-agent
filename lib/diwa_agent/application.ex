@@ -22,15 +22,19 @@ defmodule DiwaAgent.Application do
       # Agent and Shortcut Registries
       DiwaAgent.Registry.Server,
       DiwaAgent.Shortcuts.Registry,
+      DiwaAgent.Delegation.Broker,
 
       # Cloud Synchronization Worker
       DiwaAgent.Cloud.SyncWorker,
 
-      # Transport (Stdio)
-      DiwaAgent.Transport.Stdio,
+      # TALA Buffer (Transactional Accumulation & Lazy Apply)
+      DiwaAgent.Tala.Buffer,
 
-      # MCP Server
-      DiwaAgent.Server
+      # MCP Server (Must start before Transport to handle initial messages)
+      DiwaAgent.Server,
+
+      # Transport (Stdio)
+      DiwaAgent.Transport.Stdio
     ]
 
     opts = [strategy: :one_for_one, name: DiwaAgent.Supervisor]
