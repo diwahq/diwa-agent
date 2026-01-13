@@ -5,7 +5,7 @@ config :diwa_agent, DiwaAgent.Repo,
   username: "ei",
   password: "",
   database: "diwa_dev",
-  hostname: "localhost",
+  hostname: "127.0.0.1",
   pool_size: 10
 
 config :logger,
