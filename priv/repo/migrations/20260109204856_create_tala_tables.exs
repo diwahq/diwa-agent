@@ -2,7 +2,7 @@ defmodule DiwaSchema.Repo.Migrations.CreateTalaTables do
   use Ecto.Migration
 
   def change do
-    is_sqlite = repo().__adapter__ == Ecto.Adapters.SQLite3
+    is_sqlite = repo().__adapter__() == Ecto.Adapters.SQLite3
     id_default = if is_sqlite, do: nil, else: fragment("uuid_generate_v4()")
 
     # 1. Idempotency Log for deduplication
