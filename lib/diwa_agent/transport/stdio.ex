@@ -23,14 +23,17 @@ defmodule DiwaAgent.Transport.Stdio do
   end
 
   defp read_loop do
-    case IO.read(:stdio, :line) do
+    # Use binread to avoid potential encoding issues during the read itself
+    case IO.binread(:stdio, :line) do
       :eof ->
         Logger.info("[DiwaAgent.Transport.Stdio] EOF received, shutting down")
         System.halt(0)
 
       {:error, reason} ->
         Logger.error("[DiwaAgent.Transport.Stdio] Read error: #{inspect(reason)}")
-        System.halt(1)
+        # Don't halt immediately on error, allow recovery
+        Process.sleep(100)
+        read_loop()
 
       line when is_binary(line) ->
         line = String.trim(line)
@@ -66,17 +69,19 @@ defmodule DiwaAgent.Transport.Stdio do
     # Use unicode_safe to ensure all characters are properly escaped
     json = Jason.encode!(response, escape: :unicode_safe)
     
-    # Write to standard output
-    IO.puts(:standard_io, json)
+    # Write directly to file descriptor 1 (stdout) to bypass group leaders
+    # and any potential I/O server pollution (like :user).
+    # This is CRITICAL for MCP.
+    :file.write(1, json <> "\n")
   rescue
-    _ ->
+    e ->
       response_id = Map.get(response, "id")
-      msg = "[DiwaAgent.Transport.Stdio] JSON encoding failed for response ID: #{inspect(response_id)}"
+      msg = "[DiwaAgent.Transport.Stdio] JSON encoding failed for response ID: #{inspect(response_id)}. Error: #{inspect(e)}"
       IO.puts(:stderr, msg)
       Logger.error(msg)
       
       # Send a minimal error response directly to stdout
       fallback = ~s({"jsonrpc":"2.0","id":#{inspect(response_id)},"error":{"code":-32603,"message":"Internal error: JSON encoding failed"}})
-      IO.puts(:standard_io, fallback)
+      :file.write(1, fallback <> "\n")
   end
 end
