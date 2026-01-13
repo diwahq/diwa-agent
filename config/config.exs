@@ -19,7 +19,7 @@ config :diwa_agent,
   create_default_org: true
 
 config :diwa_agent, DiwaAgent.Repo,
-  types: DiwaAgent.PostgrexTypes,
+  adapter: Ecto.Adapters.SQLite3,
   migration_primary_key: [name: :id, type: :binary_id],
   database: "priv/diwa_agent.db",
   pool_size: 5

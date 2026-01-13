@@ -1,12 +1,10 @@
 import Config
 
 config :diwa_agent, DiwaAgent.Repo,
-  adapter: Ecto.Adapters.Postgres,
-  username: "ei",
-  password: "",
-  hostname: "127.0.0.1",
-  database: "diwa_agent_test",
-  pool: Ecto.Adapters.SQL.Sandbox
+  adapter: Ecto.Adapters.SQLite3,
+  database: "priv/diwa_agent_test.db",
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: 10
 
 config :logger,
   level: :warning

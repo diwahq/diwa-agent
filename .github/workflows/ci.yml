@@ -19,19 +19,6 @@ jobs:
         elixir: ['1.16', '1.17']
         otp: ['26', '27']
     
-    services:
-      postgres:
-        image: pgvector/pgvector:pg15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: diwa_agent_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
     
     steps:
     - name: Checkout code
@@ -64,14 +51,11 @@ jobs:
     
     - name: Run migrations
       run: mix ecto.create && mix ecto.migrate
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/diwa_agent_test
     
     - name: Run tests
       run: mix test
-      env:
-        DATABASE_URL: postgres://postgres:postgres@localhost:5432/diwa_agent_test
     
     - name: Verify diwa_schema package
-      run: mix run -e "IO.puts(\"diwa_schema version: #{Application.spec(:diwa_schema, :vsn)}\")"
+      run: |
+        mix run -e 'IO.puts("diwa_schema version: #{Application.spec(:diwa_schema, :vsn)}")'
       if: matrix.elixir == '1.17' && matrix.otp == '27'
