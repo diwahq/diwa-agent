@@ -79,7 +79,7 @@ defmodule DiwaAgent.MixProject do
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       
       # Shared Schema
-      {:diwa_schema, path: "../diwa_schema", override: true}
+      {:diwa_schema, git: "https://github.com/diwahq/diwa_schema.git", branch: "main", override: true}
     ]
   end
 
