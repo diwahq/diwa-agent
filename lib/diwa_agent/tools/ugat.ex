@@ -392,6 +392,14 @@ defmodule DiwaAgent.Tools.Ugat do
   alias DiwaAgent.Storage.{Memory, Task}
 
   def execute("start_session", args) do
+    execute_start_session(args)
+  end
+
+  def execute("confirm_binding", args) do
+    execute_confirm_binding(args)
+  end
+
+  defp execute_start_session(args) do
     try do
       # 1. Try smart selection first if no explicit context_id
       smart_result =
@@ -443,7 +451,7 @@ defmodule DiwaAgent.Tools.Ugat do
     end
   end
 
-  defp execute_standard_start_session(args, prefix_message \\ nil) do
+  defp execute_standard_start_session(args, _prefix_message \\ nil) do
     # 1. Resolve Context ID
     context_id = resolve_context_id(args)
 
@@ -566,7 +574,8 @@ defmodule DiwaAgent.Tools.Ugat do
     end
   end
 
-  def execute("confirm_binding", args) do
+
+  defp execute_confirm_binding(args) do
     action = Map.get(args, "action")
     binding_type = Map.get(args, "binding_type", "git_remote")
     actor = Map.get(args, "actor", "user")

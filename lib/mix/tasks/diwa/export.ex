@@ -4,7 +4,6 @@ defmodule Mix.Tasks.Diwa.Export do
   alias DiwaAgent.Repo
   alias DiwaSchema.Core.{Context, Memory, ContextBinding, ContextRelationship}
   alias DiwaSchema.Enterprise.Organization
-  import Ecto.Query
 
   @shortdoc "Export all Diwa data to JSON"
 
@@ -69,7 +68,7 @@ defmodule Mix.Tasks.Diwa.Export do
     map
     |> Map.drop(@fields_to_drop)
     |> Enum.reduce(%{}, fn
-      {k, %Ecto.Association.NotLoaded{}}, acc -> acc
+      {_k, %Ecto.Association.NotLoaded{}}, acc -> acc
       {k, v}, acc when is_struct(v, DateTime) -> Map.put(acc, k, DateTime.to_iso8601(v))
       {k, v}, acc when is_struct(v, NaiveDateTime) -> Map.put(acc, k, NaiveDateTime.to_iso8601(v))
       {k, v}, acc -> Map.put(acc, k, v)

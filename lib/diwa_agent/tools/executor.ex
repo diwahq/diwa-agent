@@ -7,14 +7,9 @@ defmodule DiwaAgent.Tools.Executor do
   """
 
   alias DiwaAgent.Storage.{Context, Memory, Plan, Task, MemoryVersion}
-  alias DiwaAgent.Registry.Server, as: Registry
+  alias DiwaSchema.Team.Session
+  alias DiwaAgent.Repo
   require Logger
-
-  @consensus_module Application.compile_env(
-                      :diwa_agent,
-                      :consensus_module,
-                      DiwaAgent.Consensus.ClusterManager
-                    )
 
   @doc """
   Execute a tool with the given arguments.
@@ -57,6 +52,10 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("queue_handoff_item", args) do
     execute_queue_handoff_item(args)
+  end
+
+  def execute("list_handoff_queue", args) do
+    execute_list_handoff_queue(args)
   end
 
   def execute("get_shortcuts", %{"context_id" => _cid}) do
@@ -464,9 +463,31 @@ defmodule DiwaAgent.Tools.Executor do
   def execute("end_session", %{"session_id" => sid, "summary" => sum} = args) do
     next_steps = Map.get(args, "next_steps", [])
 
-    case DiwaAgent.ContextBridge.LiveSync.end_session(sid, sum, next_steps) do
-      {:ok, _session} -> success_response("✓ Session ended and handoff note recorded.")
-      {:error, reason} -> error_response("Failed to end session: #{inspect(reason)}")
+    # 1. Fetch items from Handoff Queue
+    queue_text =
+      case Repo.get(Session, sid) do
+        %Session{context_id: cid} ->
+          {:ok, items} = fetch_handoff_queue_items(cid)
+          format_queue_items(items)
+
+        _ ->
+          ""
+      end
+
+    full_summary = sum <> queue_text
+
+    case DiwaAgent.ContextBridge.LiveSync.end_session(sid, full_summary, next_steps) do
+      {:ok, session} ->
+        # 2. Mark queue items as consumed
+        if session do
+          {:ok, items} = fetch_handoff_queue_items(session.context_id)
+          mark_handoff_queue_consumed(items)
+        end
+
+        success_response("✓ Session ended and handoff note recorded.\n(Included #{String.length(queue_text)} bytes of queued updates)")
+
+      {:error, reason} ->
+        error_response("Failed to end session: #{inspect(reason)}")
     end
   end
 
@@ -948,29 +969,11 @@ defmodule DiwaAgent.Tools.Executor do
         %{"context_id" => cid, "summary" => sum} = args
       ) do
     # 1. Fetch queued items (notes)
+    # 1. Fetch queued items (notes)
     {queued_entries, queued_ids} =
-      case Memory.list_by_tag(cid, "handoff_item") do
-        {:ok, items} ->
-          # Only take items that haven't been "consumed" (archived or previously included)
-          # We use a simple filter: items newer than last handoff
-          last_handoff_time =
-            case Memory.list_by_type(cid, "handoff") do
-              {:ok, [latest | _]} -> latest.inserted_at
-              _ -> DateTime.from_unix!(0)
-            end
-
-          unconsumed =
-            items
-            |> Enum.filter(fn m ->
-              DateTime.compare(m.inserted_at, last_handoff_time) == :gt &&
-                !Map.get(m.metadata || %{}, "consumed", false)
-            end)
-            |> Enum.sort_by(& &1.inserted_at, :asc)
-
-          {unconsumed, Enum.map(unconsumed, & &1.id)}
-
-        _ ->
-          {[], []}
+      case fetch_handoff_queue_items(cid) do
+        {:ok, items} -> {items, Enum.map(items, & &1.id)}
+        _ -> {[], []}
       end
 
     # 2. Extract Blockers & Decisions from queued items
@@ -985,14 +988,7 @@ defmodule DiwaAgent.Tools.Executor do
       |> Enum.map(& &1.content)
 
     # 3. Build Full Summary
-    queued_text =
-      if queued_entries == [] do
-        ""
-      else
-        "\n\n### 📥 Included Updates\n" <>
-          (Enum.map(queued_entries, &"- #{&1.content}") |> Enum.join("\n"))
-      end
-
+    queued_text = format_queue_items(queued_entries)
     full_summary = sum <> queued_text
 
     # 3.5. Check for queued artifacts (NEW: Artifact Queue Integration)
@@ -1038,16 +1034,8 @@ defmodule DiwaAgent.Tools.Executor do
     case Memory.add(cid, full_summary_with_artifacts, %{metadata: metadata}) do
       {:ok, handoff_mem} ->
         # 6. Mark consumed items in DB
-        Enum.each(queued_ids, fn id ->
-          case Memory.get(id) do
-            {:ok, m} ->
-              updated_meta = Map.put(m.metadata || %{}, "consumed", true)
-              Memory.update_metadata(id, updated_meta)
-
-            _ ->
-              :ok
-          end
-        end)
+        # 6. Mark consumed items in DB
+        mark_handoff_queue_consumed(queued_entries)
 
         success_response(
           "✓ WIKA Handoff recorded (ID: #{String.slice(handoff_mem.id, 0, 8)}). Consumed #{length(queued_ids)} queued items."
@@ -1442,305 +1430,9 @@ defmodule DiwaAgent.Tools.Executor do
   end
 
   # --- Agent Coordination Logic (Phase 1.4) ---
+  # REMOVED: Agent Coordination tools (register_agent, match_experts, delegate_task, etc.) are Enterprise only.
 
-  def execute("register_agent", %{"name" => name, "role" => role, "capabilities" => caps} = _args) do
-    # Convert role string to atom if needed
-    role_atom = String.to_atom(role)
 
-    attrs = [
-      name: name,
-      role: role_atom,
-      capabilities: caps
-    ]
-
-    case DiwaAgent.Registry.Server.register(attrs) do
-      {:ok, agent} ->
-        success_response("""
-        ✓ Agent Registered Successfully
-
-        Name: #{agent.name}
-        Role: #{agent.role}
-        ID: #{agent.id}
-        """)
-
-      error ->
-        error_response("Failed to register agent: #{inspect(error)}")
-    end
-  end
-
-  def execute("match_experts", %{"capabilities" => caps}) do
-    case DiwaAgent.Registry.Server.find_by_capabilities(caps) do
-      [] ->
-        success_response(
-          "No agents found with all requested capabilities: #{Enum.join(caps, ", ")}"
-        )
-
-      matches ->
-        text =
-          matches
-          |> Enum.map(fn a ->
-            "- #{a.name} (ID: #{a.id}, Role: #{a.role}) Status: #{a.status} Caps: #{Enum.join(a.capabilities, ",")}"
-          end)
-          |> Enum.join("\n")
-
-        success_response("🔍 Found #{length(matches)} matching experts:\n\n#{text}")
-    end
-  end
-
-  def execute("poll_delegated_tasks", %{"agent_id" => agent_id}) do
-    # Update heartbeat implicitly
-    DiwaAgent.Registry.Server.heartbeat(agent_id)
-
-    case DiwaAgent.Delegation.Broker.poll(agent_id) do
-      {:ok, []} ->
-        success_response("No pending tasks found.")
-
-      {:ok, tasks} ->
-        count = length(tasks)
-
-        list =
-          tasks
-          |> Enum.map(fn t ->
-            ref = List.first(t.active_files) || "unknown"
-
-            """
-            • [Ref: #{ref}] Task: #{t.task_definition}
-              From: #{t.from_agent_id}
-              Context: N/A (Session)
-            """
-          end)
-          |> Enum.join("\n")
-
-        success_response("""
-        Found #{count} pending task(s):
-
-        #{list}
-        """)
-
-      error ->
-        error_response("Error polling tasks: #{inspect(error)}")
-    end
-  end
-
-  def execute(
-        "delegate_task",
-        %{"from_agent_id" => from, "context_id" => _cid, "task_definition" => task_def} = args
-      ) do
-    to_agent = Map.get(args, "to_agent_id")
-    constraints = Map.get(args, "constraints", %{})
-
-    handoff =
-      DiwaAgent.Delegation.Handoff.new(%{
-        delegation_type: "agent",
-        from_agent_id: from,
-        to_agent_id: to_agent,
-        task_definition: task_def,
-        constraints: constraints
-      })
-
-    case DiwaAgent.Delegation.Broker.delegate(handoff) do
-      {:ok, ref, picked_id} ->
-        success_response("""
-        ✓ Task Delegated Successfully
-
-        Delegation ID: #{ref}
-        Target Agent: #{picked_id}
-        """)
-
-      {:error, reason} ->
-        error_response("Failed to delegate task: #{inspect(reason)}")
-    end
-  end
-
-  def execute("respond_to_delegation", %{"delegation_id" => id, "status" => status} = args) do
-    reason = Map.get(args, "reason", "No reason provided")
-    Logger.info("[Executor] Agent responded to delegation #{id}: #{status} (#{inspect(reason)})")
-
-    if status == "rejected" do
-      success_response("✓ Rejection logged (Task logic pending implementation).")
-    else
-      success_response("✓ Task accepted. Marking in-progress.")
-    end
-  end
-
-  def execute("complete_delegation", %{"delegation_id" => id, "result_summary" => summary}) do
-    # We usually need status here too, assume completed
-    case DiwaAgent.Delegation.Broker.complete(id, summary) do
-      :ok ->
-        success_response("✓ Task marked as complete.")
-
-      error ->
-        error_response("Failed to complete task: #{inspect(error)}")
-    end
-  end
-
-  def execute("get_agent_health", %{"agent_id" => agent_id, "context_id" => context_id}) do
-    # 1. Check Registry State
-    registry_status =
-      case Registry.get_agent(agent_id) do
-        nil -> "Unknown (Not Registered)"
-        agent -> "#{agent.status} (Last Heartbeat: #{agent.last_heartbeat})"
-      end
-
-    # 2. Check Failures in Memory
-    {:ok, logs} = Memory.list_by_tag(context_id, "sinag:failure")
-
-    agent_failures =
-      Enum.filter(logs, fn m ->
-        String.contains?(m.content, agent_id) or Map.get(m.metadata, "agent_id") == agent_id
-      end)
-
-    # 3. Get Last Checkpoint
-    {:ok, checkpoints} = Memory.list_by_tag(context_id, "sinag:checkpoint")
-
-    last_checkpoint =
-      checkpoints
-      |> Enum.filter(fn m ->
-        String.contains?(m.content, agent_id) or Map.get(m.metadata, "agent_id") == agent_id
-      end)
-      |> List.first()
-
-    checkpoint_info =
-      if last_checkpoint,
-        do: "Last Checkpoint: #{last_checkpoint.inserted_at} (ID: #{last_checkpoint.id})",
-        else: "No Checkpoints Found"
-
-    success_response("""
-    Agent Health Analysis: #{agent_id}
-
-    Status: #{registry_status}
-    Recent Failures: #{length(agent_failures)}
-    #{checkpoint_info}
-    """)
-  end
-
-  def execute("restore_agent", %{"agent_id" => agent_id, "context_id" => context_id}) do
-    # Find latest checkpoint
-    {:ok, checkpoints} = Memory.list_by_tag(context_id, "sinag:checkpoint")
-
-    last_checkpoint =
-      checkpoints
-      |> Enum.filter(fn m ->
-        String.contains?(m.content, agent_id) or Map.get(m.metadata, "agent_id") == agent_id
-      end)
-      |> List.first()
-
-    if is_nil(last_checkpoint) do
-      error_response(
-        "Restore failed: No valid checkpoints found for agent #{agent_id} in context #{context_id}"
-      )
-    else
-      success_response("""
-      ✓ Agent Restored Successfully (Phase 3.2 Mock)
-
-      Restored from Checkpoint: #{last_checkpoint.id}
-      Timestamp: #{last_checkpoint.inserted_at}
-      State Data: #{last_checkpoint.content}
-
-      The agent grid is now re-hydrating.
-      """)
-    end
-  end
-
-  def execute("log_failure", %{"agent_id" => agent_id, "context_id" => context_id} = args) do
-    category = Map.get(args, "error_category")
-    severity = Map.get(args, "severity")
-    stack = Map.get(args, "stack_trace", "N/A")
-    meta = Map.get(args, "metadata", %{})
-
-    content = "Failure Report for Agent #{agent_id}: #{category}\n\nStack Trace:\n#{stack}"
-
-    full_meta =
-      Map.merge(meta, %{
-        "agent_id" => agent_id,
-        "error_category" => category,
-        "severity" => severity,
-        "type" => "failure"
-      })
-
-    tags = ["sinag:failure", "sinag:agent:#{agent_id}"]
-
-    case Memory.add(context_id, content, %{metadata: full_meta, tags: tags}) do
-      {:ok, _} -> success_response("✓ Failure event logged for agent #{agent_id}.")
-      error -> error_response("Failed to log failure: #{inspect(error)}")
-    end
-  end
-
-  def execute("purge_old_checkpoints", %{"context_id" => _context_id} = args) do
-    days = Map.get(args, "retention_days", 7)
-    # This would involve querying memories by tag and date, then deleting.
-    success_response("✓ Purge simulation complete. 0 checkpoints found older than #{days} days.")
-  end
-
-  # Distributed Consensus Tools (Phase 3)
-
-  def execute("get_cluster_status", args) do
-    include_metrics = Map.get(args, "include_metrics", false)
-
-    case @consensus_module.get_cluster_status(include_metrics: include_metrics) do
-      {:ok, status} ->
-        # Handle Map or Struct
-        cluster_name = Map.get(status, :cluster_name)
-        node_id = Map.get(status, :node_id)
-        current_status = Map.get(status, :status)
-        nodes = Map.get(status, :cluster_nodes, [])
-
-        metrics_section =
-          if include_metrics do
-            """
-
-            📈 Metrics:
-            - Pending Arbitrations: #{get_pending_arbitrations_count()}
-            - Completed Arbitrations: #{get_completed_arbitrations_count()}
-            # Note: Recursive call to get_byzantine_nodes might need refactor if strict
-            - Byzantine nodes: (Check get_byzantine_nodes tool)
-            """
-          else
-            ""
-          end
-
-        success_response("""
-        📊 Cluster Status
-
-        Cluster Name: #{cluster_name}
-        Node ID: #{node_id}
-        Status: #{current_status}
-        Cluster Nodes: #{length(nodes)}#{metrics_section}
-        """)
-
-      {:error, reason} ->
-        error_response("Failed to get cluster status: #{inspect(reason)}")
-    end
-  end
-
-  def execute("get_byzantine_nodes", args) do
-    min_level = Map.get(args, "min_suspicion_level", "medium")
-
-    case @consensus_module.get_byzantine_nodes(min_suspicion_level: min_level) do
-      {:ok, nodes} ->
-        # nodes is list of %{node_id: ..., suspicion_level: ...}
-        if nodes == [] do
-          success_response("✅ No Byzantine nodes detected. Cluster is healthy.")
-        else
-          list =
-            Enum.map(nodes, fn n ->
-              node_id = n[:node_id] || n["node_id"]
-              level = n[:suspicion_level] || n["suspicion_level"]
-              "- #{inspect(node_id)} (#{level})"
-            end)
-            |> Enum.join("\n")
-
-          success_response("""
-          ⚠️ Byzantine Nodes Detected:
-
-          #{list}
-          """)
-        end
-
-      {:error, reason} ->
-        error_response("Failed to list byzantine nodes: #{inspect(reason)}")
-    end
-  end
 
 
 
@@ -1918,22 +1610,15 @@ defmodule DiwaAgent.Tools.Executor do
     end
   end
 
+  # Artifact Queue Management
+  def execute("manage_artifact_queue", %{"action" => action} = args) do
+    execute_manage_artifact_queue(action, args)
+  end
+
   def execute(tool_name, _args) do
     error_response("Unknown tool: #{tool_name}")
   end
 
-  defp get_health_summary(score) when score >= 90,
-    do: "Excellent. Context is fresh, active, and well-structured."
-
-  defp get_health_summary(score) when score >= 70, do: "Good. Context is being maintained well."
-
-  defp get_health_summary(score) when score >= 50,
-    do: "Fair. Needs more consistent updates or structure."
-
-  defp get_health_summary(score) when score >= 30,
-    do: "Poor. Context is becoming stale or lacks detail."
-
-  defp get_health_summary(_), do: "Critical. Context is obsolete or structurally deficient."
 
   defp build_tree(id, indent) do
     case Memory.get(id) do
@@ -2063,39 +1748,6 @@ defmodule DiwaAgent.Tools.Executor do
     }
   end
 
-  defp format_resolution_result(%{strategy: strategy, resolved_count: count} = res) do
-    details = Map.get(res, :details) || []
-
-    """
-    ✓ Auto-resolution complete (Strategy: #{strategy})
-    Resolved #{count} conflicts.
-    Details: #{inspect(details, pretty: true)}
-    """
-  end
-
-  defp format_resolution_result(%{manual: true, resolved_count: count, discarded: discarded}) do
-    """
-    ✓ Manual resolution complete.
-    Resolved #{count} items.
-    Discarded IDs: #{inspect(discarded, pretty: true)}
-    """
-  end
-
-  defp format_resolution_result(result) do
-    "✓ Resolution complete. Result: #{inspect(result, pretty: true)}"
-  end
-
-  # Helper functions for consensus metrics
-  defp get_pending_arbitrations_count do
-    # Placeholder - would query Ra state machine
-    0
-  end
-
-  defp get_completed_arbitrations_count do
-    # Placeholder - would query Ra state machine
-    0
-  end
-
   defp error_response(text) do
     %{
       "content" => [
@@ -2207,8 +1859,67 @@ defmodule DiwaAgent.Tools.Executor do
     end
   end
 
-  # Artifact Queue Management
-  def execute("manage_artifact_queue", %{"action" => action} = args) do
+  defp execute_list_handoff_queue(%{"context_id" => context_id}) do
+    case Memory.list_by_tag(context_id, "handoff_item") do
+      {:ok, items} ->
+        if items == [] do
+          success_response("Handoff queue is empty.")
+        else
+          formatted =
+            items
+            |> Enum.map(fn m -> "- #{m.content}" end)
+            |> Enum.join("\n")
+
+          success_response("""
+          📋 Handoff Queue (Active Session):
+
+          #{formatted}
+          """)
+        end
+
+      {:error, reason} ->
+        error_response("Failed to list handoff queue: #{inspect(reason)}")
+    end
+  end
+
+  # --- Handoff Queue Helpers ---
+
+  defp fetch_handoff_queue_items(context_id) do
+    case Memory.list_by_tag(context_id, "handoff_item") do
+      {:ok, items} ->
+        unconsumed =
+          items
+          |> Enum.filter(fn m ->
+            !Map.get(m.metadata || %{}, "consumed", false)
+          end)
+          |> Enum.sort_by(& &1.inserted_at, :asc)
+
+        {:ok, unconsumed}
+
+      _ ->
+        {:ok, []}
+    end
+  end
+
+  defp format_queue_items(items) do
+    if items == [] do
+      ""
+    else
+      "\n\n### 📥 Included Updates\n" <>
+        (items |> Enum.map(&"- #{&1.content}") |> Enum.join("\n"))
+    end
+  end
+
+  defp mark_handoff_queue_consumed(items) do
+    Enum.each(items, fn m ->
+      new_meta = Map.put(m.metadata || %{}, "consumed", true)
+      Memory.update_metadata(m.id, new_meta)
+    end)
+  end
+
+  # --- Artifact Queue Management ---
+
+  defp execute_manage_artifact_queue(action, args) do
     session_id = Map.get(args, "session_id", "default")
 
     case action do

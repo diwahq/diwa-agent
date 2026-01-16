@@ -129,6 +129,7 @@ defmodule DiwaAgent.Tools.Definitions do
       get_client_instructions(),
       determine_workflow(),
       queue_handoff_item(),
+      list_handoff_queue(),
 
       # UGAT Onboarding
       confirm_binding()
@@ -1707,6 +1708,20 @@ defmodule DiwaAgent.Tools.Definitions do
           }
         },
         required: ["context_id", "message"]
+      }
+    }
+  end
+
+  defp list_handoff_queue do
+    %{
+      name: "list_handoff_queue",
+      description: "List items currently in the handoff queue for the active session.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the project context"}
+        },
+        required: ["context_id"]
       }
     }
   end

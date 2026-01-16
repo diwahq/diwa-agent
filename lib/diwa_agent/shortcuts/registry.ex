@@ -119,9 +119,9 @@ defmodule DiwaAgent.Shortcuts.Registry do
       {"handoff", %{tool: "set_handoff_note", schema: [:summary, :next_steps, :active_files]}},
 
       # AI Agent Coordination
-      {" flow", %{tool: "determine_workflow", schema: [:query]}},
       {"note", %{tool: "queue_handoff_item", schema: [:message]}},
-      {"queue", %{tool: "manage_artifact_queue", schema: [:action, :content]}},
+      {"notes", %{tool: "list_handoff_queue", schema: []}},
+      {"queue", %{tool: "list_handoff_queue", schema: []}},
       {"pick", %{tool: "claim_work_item", schema: [:title]}},
       {"commit", %{tool: "create_checkpoint", schema: [:message]}},
       {"push", %{tool: "complete_work", schema: [:summary]}},

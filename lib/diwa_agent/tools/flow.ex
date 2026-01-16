@@ -49,7 +49,17 @@ defmodule DiwaAgent.Tools.Flow do
 
   defp find_start_workflow(_), do: nil
 
-  # P0: Immediate / Critical
+  # P0: Immediate / Critical (Handoff Queue has high priority to ensure info isn't lost)
+  defp find_p0_workflow(_role, %{handoff_queue_size: size} = _state) when size > 0 do
+    %{
+      type: :review_handoff_queue,
+      priority: :p0,
+      reason: "#{size} items in handoff queue. Review before ending session.",
+      cmd: "@queue",
+      desc: "Review handoff queue"
+    }
+  end
+
   defp find_p0_workflow(_role, %{has_blockers: true} = _state) do
     %{
       type: :resolve_blocker,
@@ -183,8 +193,17 @@ defmodule DiwaAgent.Tools.Flow do
       test_failures: count_by_tag(recent, "test_failure"),
       pending_handoff: tags_exist?(recent, "handoff_to_coder"),
       pending_tasks: count_by_tag(recent, "requirement"),
+      handoff_queue_size: count_handoff_queue(context_id), # New check
       recent_files: extract_recent_files(recent)
     }
+  end
+
+  defp count_handoff_queue(context_id) do
+    case Memory.list_by_tag(context_id, "handoff_item") do
+      {:ok, items} ->
+        Enum.count(items, fn m -> !Map.get(m.metadata || %{}, "consumed", false) end)
+      _ -> 0
+    end
   end
 
   defp default_state do
@@ -194,6 +213,7 @@ defmodule DiwaAgent.Tools.Flow do
       test_failures: 0,
       pending_handoff: false,
       pending_tasks: 0,
+      handoff_queue_size: 0,
       recent_files: []
     }
   end

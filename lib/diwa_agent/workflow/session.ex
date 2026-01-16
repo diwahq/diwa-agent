@@ -9,7 +9,6 @@ defmodule DiwaAgent.Workflow.Session do
   """
 
   alias DiwaAgent.Storage.{Context, Memory, Capabilities}
-  alias DiwaAgent.ContextBridge.LiveSync
   require Logger
 
   @doc """
@@ -41,13 +40,14 @@ defmodule DiwaAgent.Workflow.Session do
           # Multiple contexts - check for recent session
           check_recent_sessions(contexts, args)
 
-        {:error, reason} ->
-          {:error, :context_query_failed, reason}
+        _ ->
+           # Fallback for unexpected results
+           {:error, :context_query_failed, "Unknown error listing contexts"}
       end
     end
   end
 
-  defp check_recent_sessions(contexts, args) do
+  defp check_recent_sessions(contexts, _args) do
     # Look for handoff notes from last 7 days
     recent_sessions =
       contexts
