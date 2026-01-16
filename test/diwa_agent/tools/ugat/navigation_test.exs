@@ -25,11 +25,12 @@ defmodule DiwaAgent.Tools.Ugat.NavigationTest do
     end
 
     test "list current context (ls .)", %{root: root} do
-      response = Ugat.execute("navigate_contexts", %{
-        "context_id" => root.id,
-        "target_path" => ".",
-        "mode" => "list"
-      })
+      response =
+        Ugat.execute("navigate_contexts", %{
+          "context_id" => root.id,
+          "target_path" => ".",
+          "mode" => "list"
+        })
 
       assert response["isError"] == false
       text = Enum.at(response["content"], 0)["text"]
@@ -40,11 +41,12 @@ defmodule DiwaAgent.Tools.Ugat.NavigationTest do
     end
 
     test "navigate into child by name", %{root: root, child_a: child_a} do
-      response = Ugat.execute("navigate_contexts", %{
-        "context_id" => root.id,
-        "target_path" => "Child A",
-        "mode" => "list"
-      })
+      response =
+        Ugat.execute("navigate_contexts", %{
+          "context_id" => root.id,
+          "target_path" => "Child A",
+          "mode" => "list"
+        })
 
       assert response["isError"] == false
       text = Enum.at(response["content"], 0)["text"]
@@ -54,11 +56,12 @@ defmodule DiwaAgent.Tools.Ugat.NavigationTest do
 
     test "navigate up using ..", %{root: _root, child_a: child_a} do
       # From Child A, '..' should go to Root because Root "contains" Child A
-      response = Ugat.execute("navigate_contexts", %{
-        "context_id" => child_a.id,
-        "target_path" => "..",
-        "mode" => "list"
-      })
+      response =
+        Ugat.execute("navigate_contexts", %{
+          "context_id" => child_a.id,
+          "target_path" => "..",
+          "mode" => "list"
+        })
 
       assert response["isError"] == false
       text = Enum.at(response["content"], 0)["text"]
@@ -66,25 +69,27 @@ defmodule DiwaAgent.Tools.Ugat.NavigationTest do
     end
 
     test "detail view", %{root: root} do
-      response = Ugat.execute("navigate_contexts", %{
-        "context_id" => root.id,
-        "target_path" => ".",
-        "mode" => "detail"
-      })
+      response =
+        Ugat.execute("navigate_contexts", %{
+          "context_id" => root.id,
+          "target_path" => ".",
+          "mode" => "detail"
+        })
 
       assert response["isError"] == false
       text = Enum.at(response["content"], 0)["text"]
       assert text =~ "Root Project"
       assert text =~ "Memories"
     end
-    
+
     test "tree view", %{root: root} do
-       response = Ugat.execute("navigate_contexts", %{
-        "context_id" => root.id,
-        "target_path" => ".",
-        "mode" => "tree"
-      })
-      
+      response =
+        Ugat.execute("navigate_contexts", %{
+          "context_id" => root.id,
+          "target_path" => ".",
+          "mode" => "tree"
+        })
+
       assert response["isError"] == false
       text = Enum.at(response["content"], 0)["text"]
       assert text =~ "Root Project"

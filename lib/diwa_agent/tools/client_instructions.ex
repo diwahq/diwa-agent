@@ -4,7 +4,6 @@ defmodule DiwaAgent.Tools.ClientInstructions do
   """
   require Logger
 
-
   @default_version "v1"
   @all_sections ["shortcuts", "session", "workflow"]
 
@@ -34,16 +33,23 @@ defmodule DiwaAgent.Tools.ClientInstructions do
 
   defp load_section(version, section, client_type) do
     # Try client-specific template first
-    client_tpl = Path.join([:code.priv_dir(:diwa_agent), "instructions", "clients", "#{client_type}_#{section}.md.eex"])
-    
+    client_tpl =
+      Path.join([
+        :code.priv_dir(:diwa_agent),
+        "instructions",
+        "clients",
+        "#{client_type}_#{section}.md.eex"
+      ])
+
     # Fallback to versioned generic template
-    generic_tpl = Path.join([:code.priv_dir(:diwa_agent), "instructions", version, "#{section}.md.eex"])
+    generic_tpl =
+      Path.join([:code.priv_dir(:diwa_agent), "instructions", version, "#{section}.md.eex"])
 
     template_path = if File.exists?(client_tpl), do: client_tpl, else: generic_tpl
 
     if File.exists?(template_path) do
       try do
-        EEx.eval_file(template_path, [client_type: client_type])
+        EEx.eval_file(template_path, client_type: client_type)
       rescue
         e ->
           Logger.error("Failed to eval instruction template #{template_path}: #{inspect(e)}")

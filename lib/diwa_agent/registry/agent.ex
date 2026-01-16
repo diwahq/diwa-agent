@@ -29,12 +29,13 @@ defmodule DiwaAgent.Registry.Agent do
 
   def new(attrs) do
     # Ensure capabilities is a list of strings
-    caps = Keyword.get(attrs, :capabilities, [])
-    |> List.wrap()
-    |> Enum.map(&to_string/1)
+    caps =
+      Keyword.get(attrs, :capabilities, [])
+      |> List.wrap()
+      |> Enum.map(&to_string/1)
 
     id = Keyword.get(attrs, :id) || UUID.uuid4()
-    
+
     struct(__MODULE__, Keyword.put(attrs, :id, id))
     |> Map.put(:last_heartbeat, DateTime.utc_now())
     |> Map.put(:status, :idle)

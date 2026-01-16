@@ -22,6 +22,7 @@ defmodule DiwaAgent.CodeBrowser do
           |> Enum.reject(&ignored?/1)
           |> Enum.map(fn name ->
             item_path = Path.join(full_path, name)
+
             %{
               name: name,
               type: if(File.dir?(item_path), do: :directory, else: :file),
@@ -58,11 +59,12 @@ defmodule DiwaAgent.CodeBrowser do
               content
             end
 
-          {:ok, %{
-            path: relative_path,
-            content: final_content,
-            total_lines: line_count(content)
-          }}
+          {:ok,
+           %{
+             path: relative_path,
+             content: final_content,
+             total_lines: line_count(content)
+           }}
 
         {:error, reason} ->
           {:error, reason}
@@ -78,10 +80,12 @@ defmodule DiwaAgent.CodeBrowser do
   def search_code(root_path, query, opts \\ []) do
     # Check if rg is available
     case System.find_executable("rg") do
-      nil -> {:error, :ripgrep_not_found}
+      nil ->
+        {:error, :ripgrep_not_found}
+
       _rg_path ->
         args = ["--json", "--column", "--line-number", "--no-heading", "--smart-case"]
-        
+
         args = if pattern = opts[:file_pattern], do: args ++ ["-g", pattern], else: args
         args = args ++ [query, root_path]
 
@@ -89,8 +93,11 @@ defmodule DiwaAgent.CodeBrowser do
           {output, 0} ->
             results = parse_rg_json(output, root_path)
             {:ok, results}
+
           {_output, 1} ->
-            {:ok, []} # No matches
+            # No matches
+            {:ok, []}
+
           {error, _} ->
             {:error, error}
         end
@@ -110,10 +117,10 @@ defmodule DiwaAgent.CodeBrowser do
   defp extract_lines(content, start_line, end_line) do
     lines = String.split(content, ["\n", "\r\n"])
     total = length(lines)
-    
+
     start_idx = max(0, (start_line || 1) - 1)
     end_idx = min(total - 1, (end_line || total) - 1)
-    
+
     lines
     |> Enum.slice(start_idx..end_idx)
     |> Enum.join("\n")
@@ -133,7 +140,9 @@ defmodule DiwaAgent.CodeBrowser do
               content: data["lines"]["text"] |> String.trim()
             }
           ]
-        _ -> []
+
+        _ ->
+          []
       end
     end)
   end

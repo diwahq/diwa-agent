@@ -8,16 +8,16 @@ defmodule DiwaAgent.Cloud.SyncQueue do
   alias DiwaAgent.Repo
 
   @primary_key {:id, :binary_id, autogenerate: true}
-  
+
   schema "sync_queue" do
-    field :type, :string
-    field :payload, :map
-    field :status, :string, default: "pending"
-    field :priority, :integer, default: 0
-    field :attempts, :integer, default: 0
-    field :last_error, :string
-    field :scheduled_at, :utc_datetime_usec
-    
+    field(:type, :string)
+    field(:payload, :map)
+    field(:status, :string, default: "pending")
+    field(:priority, :integer, default: 0)
+    field(:attempts, :integer, default: 0)
+    field(:last_error, :string)
+    field(:scheduled_at, :utc_datetime_usec)
+
     timestamps(type: :utc_datetime_usec)
   end
 
@@ -29,17 +29,25 @@ defmodule DiwaAgent.Cloud.SyncQueue do
 
   def enqueue(type, payload, priority \\ 0) do
     %__MODULE__{}
-    |> changeset(%{type: type, payload: payload, priority: priority, scheduled_at: DateTime.utc_now()})
+    |> changeset(%{
+      type: type,
+      payload: payload,
+      priority: priority,
+      scheduled_at: DateTime.utc_now()
+    })
     |> Repo.insert()
   end
 
   def next_batch(batch_size \\ 10) do
     now = DateTime.utc_now()
-    query = from q in __MODULE__,
-      where: q.status == "pending" or (q.status == "failed" and q.attempts < 10),
-      where: q.scheduled_at <= ^now,
-      order_by: [desc: q.priority, asc: q.inserted_at],
-      limit: ^batch_size
+
+    query =
+      from(q in __MODULE__,
+        where: q.status == "pending" or (q.status == "failed" and q.attempts < 10),
+        where: q.scheduled_at <= ^now,
+        order_by: [desc: q.priority, asc: q.inserted_at],
+        limit: ^batch_size
+      )
 
     Repo.all(query)
   end

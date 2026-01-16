@@ -14,7 +14,7 @@ defmodule DiwaAgent.Tools.FlowTest do
   defp create_context_with_role(role_name) do
     {:ok, ctx} = Context.create("Flow Test", "Testing @flow")
     # Add memory to define role. Content is 2nd arg.
-    Memory.add(ctx.id, "System setup: actor #{role_name}", nil) 
+    Memory.add(ctx.id, "System setup: actor #{role_name}", nil)
     ctx
   end
 
@@ -23,7 +23,7 @@ defmodule DiwaAgent.Tools.FlowTest do
       ctx = create_context_with_role("claude")
       # Add blocker
       Memory.add(ctx.id, "API is down", %{tags: ["blocker"]})
-      
+
       result = Flow.execute("determine_workflow", %{"context_id" => ctx.id})
       response = get_in(result, ["content", Access.at(0), "text"])
 
@@ -101,17 +101,20 @@ defmodule DiwaAgent.Tools.FlowTest do
       assert response =~ "@todo"
       assert response =~ "high-priority tasks pending"
     end
-    
+
     test "P1: Custom Query overrides P2" do
-       ctx = create_context_with_role("claude")
-       # Normal state would be P2
-       
-       result = Flow.execute("determine_workflow", %{"context_id" => ctx.id, "query" => "check status"})
-       response = get_in(result, ["content", Access.at(0), "text"])
-       
-       assert response =~ "⚡" # Upgraded to P1
-       assert response =~ "@chat"
-       assert response =~ "User specified intent"
+      ctx = create_context_with_role("claude")
+      # Normal state would be P2
+
+      result =
+        Flow.execute("determine_workflow", %{"context_id" => ctx.id, "query" => "check status"})
+
+      response = get_in(result, ["content", Access.at(0), "text"])
+
+      # Upgraded to P1
+      assert response =~ "⚡"
+      assert response =~ "@chat"
+      assert response =~ "User specified intent"
     end
   end
 
@@ -140,31 +143,31 @@ defmodule DiwaAgent.Tools.FlowTest do
       assert response =~ "@stat"
       assert response =~ "Check context health"
     end
-    
+
     test "P3: Start Fresh (No Context logic)" do
-       # If passed nil context
-       result = Flow.execute("determine_workflow", %{"context_id" => nil})
-       response = get_in(result, ["content", Access.at(0), "text"])
-       
-       assert response =~ "🌱"
-       assert response =~ "P3"
-       assert response =~ "@start"
+      # If passed nil context
+      result = Flow.execute("determine_workflow", %{"context_id" => nil})
+      response = get_in(result, ["content", Access.at(0), "text"])
+
+      assert response =~ "🌱"
+      assert response =~ "P3"
+      assert response =~ "@start"
     end
   end
-  
+
   describe "Role Detection" do
-     test "detects 'human' as planner" do
-        ctx = create_context_with_role("human")
-        result = Flow.execute("determine_workflow", %{"context_id" => ctx.id})
-        response = get_in(result, ["content", Access.at(0), "text"])
-        assert response =~ "Planner Mode"
-     end
-     
-     test "detects 'cursor' as coder" do
-        ctx = create_context_with_role("cursor")
-        result = Flow.execute("determine_workflow", %{"context_id" => ctx.id})
-        response = get_in(result, ["content", Access.at(0), "text"])
-        assert response =~ "Coder Mode"
-     end
+    test "detects 'human' as planner" do
+      ctx = create_context_with_role("human")
+      result = Flow.execute("determine_workflow", %{"context_id" => ctx.id})
+      response = get_in(result, ["content", Access.at(0), "text"])
+      assert response =~ "Planner Mode"
+    end
+
+    test "detects 'cursor' as coder" do
+      ctx = create_context_with_role("cursor")
+      result = Flow.execute("determine_workflow", %{"context_id" => ctx.id})
+      response = get_in(result, ["content", Access.at(0), "text"])
+      assert response =~ "Coder Mode"
+    end
   end
 end

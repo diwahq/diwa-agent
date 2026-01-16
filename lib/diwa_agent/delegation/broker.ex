@@ -50,17 +50,18 @@ defmodule DiwaAgent.Delegation.Broker do
   @impl true
   def handle_call({:delegate, %Handoff{} = handoff}, _from, state) do
     # 1. Resolve Target Agent ID
-    target_id = case handoff.to_agent_id do
-      nil -> resolve_target_by_requirements(handoff)
-      id -> id
-    end
+    target_id =
+      case handoff.to_agent_id do
+        nil -> resolve_target_by_requirements(handoff)
+        id -> id
+      end
 
     if is_nil(target_id) do
       {:reply, {:error, :no_matching_agent_available}, state}
     else
       # 2. Track Delegation
       ref = UUID.uuid4()
-      
+
       updated_queues = Map.update(state.queues, target_id, [ref], fn list -> list ++ [ref] end)
       updated_pending = Map.put(state.pending, ref, handoff)
 

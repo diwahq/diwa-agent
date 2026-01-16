@@ -12,7 +12,7 @@ defmodule DiwaAgent.Cloud.Client do
   def sync_context(context) do
     impl().sync_context(context)
   end
-  
+
   def sync_memory(memory) do
     impl().sync_memory(memory)
   end
@@ -24,13 +24,14 @@ end
 
 defmodule DiwaAgent.Cloud.Client.Http do
   @behaviour DiwaAgent.Cloud.Client
-  
+
   require Logger
-  
+
   @default_base_url "http://localhost:4000/api/v1"
 
   def sync_context(context) do
     url = "#{base_url()}/sync/context"
+
     body = %{
       id: context.id,
       name: context.name,
@@ -39,10 +40,13 @@ defmodule DiwaAgent.Cloud.Client.Http do
     }
 
     case post(url, body) do
-      {:ok, %{status: 201}} -> :ok
+      {:ok, %{status: 201}} ->
+        :ok
+
       {:ok, %{status: status, body: body}} ->
         Logger.warning("[CloudClient] Context sync failed (#{status}): #{inspect(body)}")
         {:error, :sync_failed}
+
       {:error, reason} ->
         Logger.error("[CloudClient] Context sync error: #{inspect(reason)}")
         {:error, reason}
@@ -54,6 +58,7 @@ defmodule DiwaAgent.Cloud.Client.Http do
   """
   def sync_memory(memory) do
     url = "#{base_url()}/sync/memory"
+
     body = %{
       context_id: memory.context_id,
       content: memory.content,
@@ -69,10 +74,13 @@ defmodule DiwaAgent.Cloud.Client.Http do
     }
 
     case post(url, body) do
-      {:ok, %{status: 201}} -> :ok
+      {:ok, %{status: 201}} ->
+        :ok
+
       {:ok, %{status: status, body: body}} ->
         Logger.warning("[CloudClient] Memory sync failed (#{status}): #{inspect(body)}")
         {:error, :sync_failed}
+
       {:error, reason} ->
         Logger.error("[CloudClient] Memory sync error: #{inspect(reason)}")
         {:error, reason}
@@ -85,6 +93,7 @@ defmodule DiwaAgent.Cloud.Client.Http do
 
   defp auth_headers do
     token = System.get_env("DIWA_CLOUD_TOKEN")
+
     if token do
       [{"authorization", "Bearer #{token}"}]
     else

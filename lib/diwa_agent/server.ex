@@ -68,11 +68,11 @@ defmodule DiwaAgent.Server do
   defp process_request(%{"method" => "initialize"} = request, state) do
     # Accept client's protocol version preference if compatible
     _client_protocol = get_in(request, ["params", "protocolVersion"]) || "2024-11-05"
-    
+
     # Use the latest stable protocol version we support
     # 2024-11-05 is the current MCP stable version
     server_protocol = "2024-11-05"
-    
+
     response = %{
       "jsonrpc" => "2.0",
       "id" => request["id"],
@@ -203,7 +203,9 @@ defmodule DiwaAgent.Server do
           )
 
           %{
-            "content" => [%{"type" => "text", "text" => "Error: #{inspect(kind)}: #{inspect(reason)}"}],
+            "content" => [
+              %{"type" => "text", "text" => "Error: #{inspect(kind)}: #{inspect(reason)}"}
+            ],
             "isError" => true
           }
       end

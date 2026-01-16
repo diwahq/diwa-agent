@@ -6,8 +6,11 @@ echo " Diwa E2E Test"
 echo "════════════════════════════════════════════════════════"
 echo ""
 
+# Define DB path
+export DATABASE_PATH="$HOME/.diwa/diwa_agent.db"
+
 # Clean database
-rm -rf ~/.diwa/diwa.db 2>/dev/null || true
+rm -rf "$DATABASE_PATH" 2>/dev/null || true
 
 # Start server in background and send test requests
 (
@@ -25,15 +28,15 @@ echo "════════════════════════�
 echo " Database Check"
 echo "════════════════════════════════════════════════════════"
 
-if [ -f ~/.diwa/diwa.db ]; then
+if [ -f "$DATABASE_PATH" ]; then
   echo "✓ Database created successfully"
   echo ""
   echo "Contexts:"
-  sqlite3 ~/.diwa/diwa.db "SELECT id, name, description FROM contexts" 2>/dev/null || echo "  (none)"
+  sqlite3 "$DATABASE_PATH" "SELECT id, name, description FROM contexts" 2>/dev/null || echo "  (none)"
   echo ""
   echo "Stats:"
-  echo "  Contexts: $(sqlite3 ~/.diwa/diwa.db "SELECT COUNT(*) FROM contexts" 2>/dev/null)"
-  echo "  Memories: $(sqlite3 ~/.diwa/diwa.db "SELECT COUNT(*) FROM memories" 2>/dev/null)"
+  echo "  Contexts: $(sqlite3 "$DATABASE_PATH" "SELECT COUNT(*) FROM contexts" 2>/dev/null)"
+  echo "  Memories: $(sqlite3 "$DATABASE_PATH" "SELECT COUNT(*) FROM memories" 2>/dev/null)"
 else
   echo "✗ Database not found"
 fi

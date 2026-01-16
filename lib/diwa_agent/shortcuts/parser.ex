@@ -26,7 +26,7 @@ defmodule DiwaAgent.Shortcuts.Parser do
     # Remove leading prefix length
     prefix_len = String.length(prefix)
     without_prefix = String.slice(input, prefix_len..-1//1)
-    
+
     # Regex to capture command (first word) and then remainder
     case Regex.run(~r/^(\S+)(.*)$/s, without_prefix) do
       [_, command, rest] ->

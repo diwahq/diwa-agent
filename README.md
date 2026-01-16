@@ -1,124 +1,275 @@
-# Diwa Agent - The Open Source Context & Memory Layer
+# 🧠 Diwa Agent - AI Memory That Actually Works
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Elixir](https://img.shields.io/badge/Elixir-1.16+-purple.svg)](https://elixir-lang.org/)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
 
-**Diwa Agent** is a professional-grade **Model Context Protocol (MCP)** server built in Elixir. It provides autonomous context management and persistent memory for AI coding assistants (like Claude, Cursor, and Windsurf).
+**Stop losing context every time your AI assistant resets.** Diwa Agent is a local-first memory layer that remembers your decisions, requirements, and technical facts across sessions—no cloud required.
 
-> 🚀 **Note:** This is the open-source agent component of the Diwa Platform. For enterprise features (Health Scoring, Auto-Context Extraction, Conflict Arbitration), please visit [diwa.one](https://diwa.one).
+Built on the **Model Context Protocol (MCP)**, Diwa Agent works seamlessly with Claude Desktop, Cursor, Windsurf, and any MCP-compatible AI coding assistant.
 
-## 🎯 What is Diwa Agent?
+---
 
-Diwa Agent acts as a "long-term memory" and "project manager" for your AI assistant. Instead of starting every chat session from scratch, Diwa allows your AI to:
-- **Remember** decisions, requirements, and lessons across sessions.
-- **Track** project status, tasks, and blockers.
-- **Search** past conversations and architectural notes.
-- **Organize** knowledge into structured contexts (Projects/Workspaces).
+## ⚡ 5-Minute Quick Start
 
-It adheres to the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) standard, making it plug-and-play compatible with modern AI tools.
+### 1. Install (2 minutes)
 
-## ✨ New in v2.0
-
-We have significantly upgraded the core architecture to support professional workflows:
-
-*   **🔍 UGAT (Universal Git & Agent Tooling)**: Zero-config context detection. The agent automatically detects which project "Context" you are working on based on your `git remote` or file path. No more manual switching.
-*   **🛡️ TALA (Transactional Accumulation)**: "Think first, commit later." The agent buffers complex changes in a transaction buffer to ensure stability before applying them to the memory graph.
-*   **☁️ Hybrid Sync**: Optional integration with Diwa Cloud. Run 100% local for privacy, or connect to an Enterprise instance to share context with your team.
-
-## 🚀 Core Features (OSS)
-
-- **🧠 Persistent Memory**: Store notes, decisions, and technical facts that survive chat session resets.
-- **📂 Context Management**: Organize memories into distinct projects (Contexts).
-- **🔍 Semantic Search**: Find relevant memories using vector embeddings (OpenAI) or keyword search (PostgreSQL).
-- **📋 Project Tracking**: Manage requirements, tasks, and blockers explicitly.
-- **⚡ High Performance**: Built on Elixir/OTP and PostgreSQL for sub-millisecond response times.
-- **🔌 Standard MCP**: Full support for MCP tools and resources.
-
-## 📚 Available Tools
-
-The agent provides the following MCP tools to your AI assistant:
-
-### 🔍 Context Intelligence (UGAT)
-- `detect_context(type, value)`: Auto-detect context from git remote or path.
-- `bind_context(context_id, type, value)`: Bind a directory to a persistent context.
-- `start_session`: Initialize a session with handoff notes and pending tasks.
-
-### 🧠 Memory & Knowledge
-- `add_memory(context_id, content)`
-- `search_memories(query)`
-- `list_memories(context_id)`
-- `record_decision(decision, rationale)`
-
-### 📋 Project Management
-- `set_project_status(status, completion_pct)`
-- `add_requirement(title, description)`
-- `flag_blocker(title, description)`
-- `commit_buffer`: Flush pending TALA operations.
-
-### 🔄 Workflow & Handoff
-- `queue_handoff_item`: Add an accomplishment or note to the next session's handoff.
-- `set_handoff_note(summary, next_steps)`
-- `get_active_handoff(context_id)`
-
-## 🚀 Quick Start
-
-### 1. Run with Docker (Recommended)
+**Prerequisites**: Elixir 1.16+ and Erlang/OTP 26+
 
 ```bash
-docker run -d \
-  -p 4000:4000 \
-  -e DATABASE_URL="postgresql://user:pass@host/db" \
-  -e OPENAI_API_KEY="sk-..." \
-  ghcr.io/diwahq/diwa-agent:latest
+git clone https://github.com/diwahq/diwa-agent.git
+cd diwa-agent
+
+# Install dependencies and set up database
+mix deps.get
+mix ecto.setup
 ```
 
-### 2. Configure Claude Desktop
+### 2. Connect to Claude Desktop (2 minutes)
 
-Add this to your `claude_desktop_config.json`:
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "diwa": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "OPENAI_API_KEY=sk-...", "ghcr.io/diwahq/diwa-agent:latest"]
+      "command": "mix",
+      "args": ["run", "--no-halt"],
+      "cwd": "/absolute/path/to/diwa-agent"
     }
   }
 }
 ```
 
-## 🛠️ Development
+**Replace `/absolute/path/to/diwa-agent`** with your actual path, then **restart Claude Desktop**.
 
-### Prerequisites
-- Elixir 1.15+
-- PostgreSQL 15+ (with `pgvector` extension)
+### 3. Start Using It (1 minute)
 
-### Setup
+In Claude Desktop, try these commands:
 
-```bash
-# Clone the repo
-git clone https://github.com/diwahq/diwa-agent.git
-cd diwa-agent
-
-# Install dependencies
-mix deps.get
-
-# Setup Database
-mix ecto.setup
-
-# Run the server
-mix run --no-halt
+```
+@start                    # Auto-detects your project or lets you choose
+@note "API uses REST"     # Store a quick fact
+@decide "Use PostgreSQL for production" because "Better JSONB support"
+@search "API"             # Find what you stored
 ```
 
-> ⚠️ **Architecture Note:** This project relies on the `diwa_schema` shared library for Ecto schemas and migrations. Ensure the sibling directory structure is maintained if running from source.
-
-## 🤝 Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+That's it! Diwa is now tracking your project knowledge.
 
 ---
 
-**Built with ❤️ by the Diwa Team**
+## 🎯 Why Diwa Agent?
+
+### The Problem
+- AI assistants forget everything when you start a new chat
+- You re-explain the same architecture decisions daily
+- Important requirements get lost between sessions
+- No way to track what you've already decided
+
+### The Solution
+Diwa Agent gives your AI assistant a **persistent memory**:
+
+✅ **Remembers Forever**: Decisions, requirements, and facts survive session resets  
+✅ **Context-Aware**: Auto-detects which project you're working on via git  
+✅ **Zero Cloud**: Everything stays on your machine (SQLite database)  
+✅ **MCP Standard**: Works with any MCP-compatible AI tool  
+✅ **Lightweight**: No Docker, no server setup, just Elixir
+
+---
+
+## 🏗️ Architecture
+
+Diwa Agent is the **Community Edition** of the Diwa ecosystem:
+
+| Feature | Community (Agent) | Enterprise (Cloud) |
+|---------|-------------------|-------------------|
+| **Database** | SQLite | PostgreSQL |
+| **Deployment** | Local only | Team-shared |
+| **Search** | Text search (ILIKE) | Vector search (pgvector) |
+| **Auto-Context** | ✅ UGAT detection | ✅ UGAT + ACE Engine |
+| **Conflict Detection** | ❌ | ✅ Patent #3 |
+| **Health Scoring** | ❌ | ✅ Patent #1 |
+| **License** | Apache 2.0 | BSL 1.1 |
+
+**For teams and advanced features**: See [Diwa Cloud](../diwa-cloud/README.md)
+
+---
+
+## 📚 Core Concepts
+
+### Contexts
+Think of a Context as a **project workspace**. Each git repo typically maps to one Context. Diwa auto-detects contexts using:
+- Git remote URL
+- Working directory path
+- Manual binding
+
+### Memories
+Everything you store—notes, decisions, requirements—is a Memory. They're automatically:
+- Timestamped
+- Searchable
+- Versioned
+- Tagged
+
+### Shortcuts
+Use `@` commands for common operations:
+
+| Shortcut | Does |
+|----------|------|
+| `@start` | Begin session, see handoff from last time |
+| `@note "text"` | Quick memory |
+| `@decide "choice" because "reason"` | Record decision |
+| `@search "keyword"` | Find memories |
+| `@status` | Project health check |
+| `@end` | Close session with handoff note |
+
+---
+
+## 🔧 MCP Tools Reference
+
+Diwa provides 40+ MCP tools. Here are the essentials:
+
+### Session Management
+- `start_session`: Initialize with auto-context detection
+- `end_session`: Generate handoff note for next session
+- `get_active_handoff`: Resume where you left off
+
+### Memory Operations  
+- `add_memory`: Store any knowledge
+- `search_memories`: Find by keyword
+- `update_memory`: Edit existing memory
+- `delete_memory`: Remove outdated info
+
+### Decision Tracking
+- `record_decision`: Architecture choices with rationale
+- `record_lesson`: Capture what you learned
+- `flag_blocker`: Mark technical obstacles
+
+### Context Management
+- `create_context`: New project workspace
+- `list_contexts`: See all your projects
+- `detect_context`: Auto-find from git/path
+
+**Full tool list**: Run `list_tools` in your MCP client or see [docs/TOOLS.md](./docs/TOOLS.md)
+
+---
+
+## 🚀 Advanced Setup
+
+### For Cursor
+
+Add to `.cursor/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "diwa": {
+      "command": "mix",
+      "args": ["run", "--no-halt"],
+      "cwd": "/path/to/diwa-agent"
+    }
+  }
+}
+```
+
+### For Windsurf
+
+Add to your Windsurf MCP configuration (location varies by OS).
+
+### For Other MCP Clients
+
+Diwa Agent implements the standard MCP stdio transport. Configure your client to run:  
+**Command**: `mix run --no-halt`  
+**CWD**: `/path/to/diwa-agent`
+
+---
+
+## 📖 Documentation
+
+- **[Getting Started](../docs/getting-started.md)**: Detailed setup and first steps
+- **[MCP Setup Guide](../docs/mcp-setup.md)**: Client-specific configuration
+- **[Migration Guide](../docs/MIGRATION_GUIDE.md)**: Upgrade to Diwa Cloud
+- **[Architecture](../docs/ARCHITECTURE.md)**: How Agent and Cloud relate
+- **[Data Format](../docs/DATA_FORMAT.md)**: Export/import specification
+
+---
+
+## ⤴️ Migrating to Enterprise
+
+When you're ready for team features, advanced analytics, or vector search:
+
+```bash
+# Export your local knowledge
+mix diwa.export --output my_project.json
+
+# Set up Diwa Cloud (see Cloud README)
+cd ../diwa-cloud
+mix diwa.import my_project.json
+```
+
+**Zero data loss.** UUIDs and timestamps are preserved for perfect continuity.
+
+See the [Migration Guide](../docs/MIGRATION_GUIDE.md) for details.
+
+---
+
+## 🛠️ Development
+
+### Requirements
+- **Elixir**: 1.16 or higher
+- **Erlang/OTP**: 26 or higher
+- **SQLite3**: Usually pre-installed on macOS/Linux
+
+### Running Tests
+
+```bash
+mix test
+```
+
+### Project Structure
+
+```
+diwa-agent/
+├── lib/
+│   └── diwa_agent/
+│       ├── storage/          # SQLite persistence
+│       ├── tools/            # MCP tool implementations
+│       ├── shortcuts/        # @ command registry
+│       └── workflow/         # Session management
+├── priv/repo/migrations/     # Database schema
+└── test/                     # Test suite
+```
+
+---
+
+## 🤝 Contributing
+
+Diwa Agent is open source (Apache 2.0). Contributions welcome!
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+**Apache License 2.0** - Free for commercial and personal use.
+
+See [LICENSE](LICENSE) for full terms.
+
+---
+
+## 🔗 Links
+
+- **Website**: [diwa.one](https://diwa.one)
+- **Documentation**: [docs/](../docs/)
+- **Enterprise Edition**: [diwa-cloud](../diwa-cloud/)
+- **MCP Specification**: [modelcontextprotocol.io](https://modelcontextprotocol.io/)
+
+---
+
+**Built with ❤️ for developers who are tired of explaining the same thing twice.**
+
+Questions? Open an issue or join the discussion.

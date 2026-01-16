@@ -30,14 +30,15 @@ defmodule DiwaAgent.ContextBridge.Hydration do
     # 4. Get available shortcuts
     shortcuts = DiwaAgent.Shortcuts.Registry.list_shortcuts()
 
-    {:ok, %{
-      handoff: handoff,
-      blockers: blockers,
-      memories: relevant_memories,
-      shortcuts: shortcuts,
-      depth: depth,
-      focus: focus
-    }}
+    {:ok,
+     %{
+       handoff: handoff,
+       blockers: blockers,
+       memories: relevant_memories,
+       shortcuts: shortcuts,
+       depth: depth,
+       focus: focus
+     }}
   end
 
   defp get_latest_handoff(context_id) do

@@ -54,7 +54,7 @@ defmodule DiwaAgent.Registry.Server do
   def get_agent(agent_id) do
     GenServer.call(__MODULE__, {:get_agent, agent_id})
   end
-  
+
   @doc """
   Find agents that possess all required capabilities.
   """

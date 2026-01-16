@@ -6,7 +6,8 @@ defmodule DiwaAgent.Cloud.SyncWorker do
   require Logger
   alias DiwaAgent.Cloud.{SyncQueue, Client}
 
-  @poll_interval 5_000 # 5 seconds
+  # 5 seconds
+  @poll_interval 5_000
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -40,6 +41,7 @@ defmodule DiwaAgent.Cloud.SyncWorker do
           :ok -> SyncQueue.mark_completed(item.id)
           {:error, reason} -> SyncQueue.mark_failed(item.id, reason)
         end
+
       "memory" ->
         # Map payload back to something Client.sync_memory(memory) can use
         # In a real app, we might store the full struct or use a specialized mapper

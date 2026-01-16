@@ -6,12 +6,12 @@ defmodule DiwaAgent.Tala.Operation do
   @foreign_key_type :binary_id
 
   schema "tala_operations" do
-    field :session_id, :binary_id
-    field :context_id, :binary_id
-    field :tool_name, :string
-    field :params, :map
-    field :actor, :string
-    field :status, :string, default: "pending"
+    field(:session_id, :binary_id)
+    field(:context_id, :binary_id)
+    field(:tool_name, :string)
+    field(:params, :map)
+    field(:actor, :string)
+    field(:status, :string, default: "pending")
 
     timestamps(updated_at: false)
   end

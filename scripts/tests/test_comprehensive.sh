@@ -8,9 +8,14 @@ echo " Diwa MCP Server - Comprehensive Test"
 echo "════════════════════════════════════════════════════════"
 echo ""
 
+echo ""
+
+# Define DB path
+export DATABASE_PATH="$HOME/.diwa/diwa_agent.db"
+
 # Clean up old database
 echo "→ Cleaning up old test database..."
-rm -rf ~/.diwa/diwa.db 2>/dev/null || true
+rm -rf "$DATABASE_PATH" 2>/dev/null || true
 echo ""
 
 # Helper function to run a test
@@ -58,7 +63,7 @@ run_test "list_contexts" \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_contexts","arguments":{}}}'
 
 # Get context ID from database
-CONTEXT_ID=$(sqlite3 ~/.diwa/diwa.db "SELECT id FROM contexts LIMIT 1" 2>/dev/null || echo "")
+CONTEXT_ID=$(sqlite3 "$DATABASE_PATH" "SELECT id FROM contexts LIMIT 1" 2>/dev/null || echo "")
 
 if [ -n "$CONTEXT_ID" ]; then
   echo "✓ Found context ID: $CONTEXT_ID"
@@ -90,7 +95,7 @@ if [ -n "$CONTEXT_ID" ]; then
     "{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"tools/call\",\"params\":{\"name\":\"list_memories\",\"arguments\":{\"context_id\":\"$CONTEXT_ID\"}}}"
   
   # Get memory ID
-  MEMORY_ID=$(sqlite3 ~/.diwa/diwa.db "SELECT id FROM memories LIMIT 1" 2>/dev/null || echo "")
+  MEMORY_ID=$(sqlite3 "$DATABASE_PATH" "SELECT id FROM memories LIMIT 1" 2>/dev/null || echo "")
   
   if [ -n "$MEMORY_ID" ]; then
     echo "✓ Found memory ID: $MEMORY_ID"
@@ -120,10 +125,10 @@ echo "════════════════════════�
 echo ""
 
 # Check final database state
-if [ -f ~/.diwa/diwa.db ]; then
+if [ -f "$DATABASE_PATH" ]; then
   echo "Database statistics:"
-  echo "  Contexts: $(sqlite3 ~/.diwa/diwa.db "SELECT COUNT(*) FROM contexts" 2>/dev/null || echo "0")"
-  echo "  Memories: $(sqlite3 ~/.diwa/diwa.db "SELECT COUNT(*) FROM memories" 2>/dev/null || echo "0")"
+  echo "  Contexts: $(sqlite3 "$DATABASE_PATH" "SELECT COUNT(*) FROM contexts" 2>/dev/null || echo "0")"
+  echo "  Memories: $(sqlite3 "$DATABASE_PATH" "SELECT COUNT(*) FROM memories" 2>/dev/null || echo "0")"
 else
   echo "⚠  Database not found"
 fi

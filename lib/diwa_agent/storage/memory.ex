@@ -136,7 +136,7 @@ defmodule DiwaAgent.Storage.Memory do
         query = if include_deleted, do: query, else: where(query, [m], is_nil(m.deleted_at))
 
         {:ok, Repo.all(query)}
-      
+
       :error ->
         Logger.warning("Invalid context_id provided to Memory.list/2: #{inspect(context_id)}")
         {:error, :invalid_context_id}
@@ -157,7 +157,6 @@ defmodule DiwaAgent.Storage.Memory do
     end
   end
 
-
   defp cast_uuid(nil), do: :error
 
   defp cast_uuid(id) do
@@ -169,16 +168,17 @@ defmodule DiwaAgent.Storage.Memory do
 
   @doc false
   defp validate_context_id(nil), do: {:ok, nil}
-  
+
   defp validate_context_id(context_id) do
     case Ecto.UUID.cast(context_id) do
-      {:ok, valid_uuid} -> {:ok, valid_uuid}
-      :error -> 
+      {:ok, valid_uuid} ->
+        {:ok, valid_uuid}
+
+      :error ->
         Logger.warning("Invalid context_id UUID: #{inspect(context_id)}")
         {:error, :invalid_context_id}
     end
   end
-
 
   @doc """
   Update a memory's content.
@@ -356,7 +356,9 @@ defmodule DiwaAgent.Storage.Memory do
         end
 
       query =
-        if valid_context_id, do: where(base_query, [m], m.context_id == ^valid_context_id), else: base_query
+        if valid_context_id,
+          do: where(base_query, [m], m.context_id == ^valid_context_id),
+          else: base_query
 
       {:ok, Repo.all(query)}
     end
@@ -369,19 +371,24 @@ defmodule DiwaAgent.Storage.Memory do
     with {:ok, valid_context_id} <- validate_context_id(context_id) do
       # Only search recent or limited set to avoid performance issues
       limit = 200
-      base_query = 
-        from(m in Memory, 
+
+      base_query =
+        from(m in Memory,
           where: is_nil(m.deleted_at),
           order_by: [desc: m.inserted_at],
           limit: ^limit
         )
-        
-      query = if valid_context_id, do: where(base_query, [m], m.context_id == ^valid_context_id), else: base_query
+
+      query =
+        if valid_context_id,
+          do: where(base_query, [m], m.context_id == ^valid_context_id),
+          else: base_query
+
       memories = Repo.all(query)
-      
-      scored = 
+
+      scored =
         memories
-        |> Enum.map(fn m -> 
+        |> Enum.map(fn m ->
           # Check both content and optional metadata (like tags/title if any)
           score = DiwaAgent.Utils.Fuzzy.jaro_winkler(query_str, String.slice(m.content, 0, 100))
           {m, score}
@@ -389,7 +396,7 @@ defmodule DiwaAgent.Storage.Memory do
         |> Enum.filter(fn {_, score} -> score >= 0.65 end)
         |> Enum.sort_by(fn {_, score} -> score end, :desc)
         |> Enum.map(&elem(&1, 0))
-        
+
       {:ok, scored}
     end
   end
@@ -399,7 +406,9 @@ defmodule DiwaAgent.Storage.Memory do
   """
   def count(context_id) do
     with {:ok, valid_context_id} <- validate_context_id(context_id) do
-      query = from(m in Memory, where: m.context_id == ^valid_context_id, where: is_nil(m.deleted_at))
+      query =
+        from(m in Memory, where: m.context_id == ^valid_context_id, where: is_nil(m.deleted_at))
+
       {:ok, Repo.aggregate(query, :count, :id)}
     end
   end
@@ -419,13 +428,13 @@ defmodule DiwaAgent.Storage.Memory do
           order_by: [desc: m.inserted_at]
         )
 
-      query = 
+      query =
         if adapter == Ecto.Adapters.Postgres do
           # Postgres JSONB syntax
-          from m in query, where: fragment("?->>'type' = ?", m.metadata, ^type)
+          from(m in query, where: fragment("?->>'type' = ?", m.metadata, ^type))
         else
           # SQLite syntax
-          from m in query, where: fragment("json_extract(?, '$.type') = ?", m.metadata, ^type)
+          from(m in query, where: fragment("json_extract(?, '$.type') = ?", m.metadata, ^type))
         end
 
       {:ok, Repo.all(query)}
@@ -539,6 +548,7 @@ defmodule DiwaAgent.Storage.Memory do
       :ok
     end
   end
+
   defp spawn_embedding_task(memory, content) do
     # Check if TaskSupervisor is started (e.g. in test env it might not be)
     if Process.whereis(DiwaAgent.TaskSupervisor) do
@@ -585,7 +595,9 @@ defmodule DiwaAgent.Storage.Memory do
 
   defp update_context_timestamp(context_id) do
     case Repo.get(Context, context_id) do
-      nil -> :ok
+      nil ->
+        :ok
+
       context ->
         context
         |> DiwaSchema.Core.Context.touch_changeset(%{updated_at: DateTime.utc_now()})

@@ -24,14 +24,18 @@ defmodule BridgeToolsTest do
         })
 
       assert result["content"]
-      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "Implementation") end)
+
+      assert Enum.any?(result["content"], fn c ->
+               String.contains?(c["text"], "Implementation")
+             end)
 
       # Get status
       result = Executor.execute("get_project_status", %{"context_id" => ctx.id})
       assert result["content"]
 
       assert Enum.any?(result["content"], fn c ->
-               String.contains?(c["text"], "Implementation") and String.contains?(c["text"], "45%")
+               String.contains?(c["text"], "Implementation") and
+                 String.contains?(c["text"], "45%")
              end)
     end
 
@@ -73,7 +77,10 @@ defmodule BridgeToolsTest do
         })
 
       assert result["content"]
-      assert Enum.any?(result["content"], fn c -> String.contains?(c["text"], "Metadata Filtering") end)
+
+      assert Enum.any?(result["content"], fn c ->
+               String.contains?(c["text"], "Metadata Filtering")
+             end)
 
       # Search lessons
       result = Executor.execute("search_lessons", %{"query" => "LIKE"})

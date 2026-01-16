@@ -1,7 +1,7 @@
 defmodule DiwaAgent.MixProject do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "0.1.0"
   @source_url "https://github.com/diwahq/diwa-agent"
 
   def project do
@@ -32,8 +32,12 @@ defmodule DiwaAgent.MixProject do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "ecto.migrate": ["ecto.migrate --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"],
-      "ecto.rollback": ["ecto.rollback --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"],
+      "ecto.migrate": [
+        "ecto.migrate --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
+      ],
+      "ecto.rollback": [
+        "ecto.rollback --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
+      ],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end
@@ -77,16 +81,17 @@ defmodule DiwaAgent.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:mox, "~> 1.0", only: :test},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
-      
+
       # Shared Schema
-      {:diwa_schema, git: "https://github.com/diwahq/diwa_schema.git", branch: "main", override: true}
+      {:diwa_schema,
+       git: "https://github.com/diwahq/diwa_schema.git", branch: "main", override: true}
     ]
   end
 
   defp package do
     [
       name: "diwa_agent",
-      licenses: ["MIT"],
+      licenses: ["Apache-2.0"],
       links: %{
         "GitHub" => @source_url,
         "Docs" => "https://docs.diwa.one"

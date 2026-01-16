@@ -4,8 +4,8 @@ export MIX_ENV=dev
 cd "$(dirname "$0")"
 
 # 1. Ensure dependencies and compilation are done (redirect ALL to stderr)
-mix deps.get >&2 2>&1
-mix compile >&2 2>&1
+# mix deps.get >&2 2>&1
+# mix compile >&2 2>&1
 
 # 2. Run MCP server with stdout reserved for JSON-RPC only
 #    Key insight: The Stdio transport uses :file.write(1, json) which writes directly

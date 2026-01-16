@@ -3,7 +3,7 @@ defmodule DiwaAgent.Tools.Flow do
   Logic for `@flow` shortcut and `determine_workflow` tool.
   Implements strict priority-based workflow detection and role-aware routing.
   """
-  
+
   alias DiwaAgent.Storage.Memory
   require Logger
 
@@ -12,14 +12,14 @@ defmodule DiwaAgent.Tools.Flow do
   def execute("determine_workflow", args) do
     query = Map.get(args, "query")
     context_id = Map.get(args, "context_id")
-    
+
     # 1. Detect Role & Analyze State
     role = detect_role(context_id)
     state = analyze_state(context_id)
-    
+
     # 2. Determine Workflow (The Core Logic)
     result = determine_best_workflow(context_id, role, state, query)
-    
+
     # 3. Format Response
     success_response(format_flow_response(role, result, state))
   end
@@ -28,7 +28,7 @@ defmodule DiwaAgent.Tools.Flow do
 
   defp determine_best_workflow(context_id, role, state, query) do
     # This pipeline tries to match workflows in P0 -> P1 -> P2 -> P3 order
-    
+
     find_start_workflow(context_id) ||
       find_p0_workflow(role, state) ||
       find_p1_workflow(role, state, query) ||
@@ -36,7 +36,7 @@ defmodule DiwaAgent.Tools.Flow do
       find_p3_workflow(role, state) ||
       fallback_workflow(role)
   end
-  
+
   defp find_start_workflow(nil) do
     %{
       type: :start_fresh,
@@ -46,6 +46,7 @@ defmodule DiwaAgent.Tools.Flow do
       desc: "Initialize session"
     }
   end
+
   defp find_start_workflow(_), do: nil
 
   # P0: Immediate / Critical
@@ -101,7 +102,7 @@ defmodule DiwaAgent.Tools.Flow do
       desc: "Continue implementation"
     }
   end
-  
+
   defp find_p1_workflow(:planner, %{pending_tasks: count}, _query) when count > 0 do
     %{
       type: :continue_planning,
@@ -113,7 +114,7 @@ defmodule DiwaAgent.Tools.Flow do
   end
 
   defp find_p1_workflow(_role, _state, query) when is_binary(query) and query != "" do
-     %{
+    %{
       type: :custom_query,
       priority: :p1,
       reason: "User specified intent: '#{query}'",
@@ -155,9 +156,9 @@ defmodule DiwaAgent.Tools.Flow do
       desc: "Initialize session"
     }
   end
-  
+
   defp fallback_workflow(_) do
-     %{
+    %{
       type: :unknown,
       priority: :p3,
       reason: "Standard workflow",
@@ -169,12 +170,13 @@ defmodule DiwaAgent.Tools.Flow do
   # --- Analysis & Detection ---
 
   defp analyze_state(nil), do: default_state()
+
   defp analyze_state(context_id) do
     # In a real implementation we would fetch these from the DB/Tools
     # mocking basic checks based on memory tags for now
-    
+
     {:ok, recent} = Memory.list(context_id, limit: 30)
-    
+
     %{
       has_blockers: tags_exist?(recent, "blocker"),
       has_conflicts: tags_exist?(recent, "conflict"),
@@ -184,7 +186,7 @@ defmodule DiwaAgent.Tools.Flow do
       recent_files: extract_recent_files(recent)
     }
   end
-  
+
   defp default_state do
     %{
       has_blockers: false,
@@ -199,14 +201,14 @@ defmodule DiwaAgent.Tools.Flow do
   defp tags_exist?(memories, tag) do
     Enum.any?(memories, fn m -> m.tags && tag in m.tags end)
   end
-  
+
   defp count_by_tag(memories, tag) do
     Enum.count(memories, fn m -> m.tags && tag in m.tags end)
   end
 
   defp extract_recent_files(memories) do
     memories
-    |> Enum.flat_map(fn m -> 
+    |> Enum.flat_map(fn m ->
       case m.metadata do
         %{"active_files" => files} when is_list(files) -> files
         _ -> []
@@ -225,38 +227,41 @@ defmodule DiwaAgent.Tools.Flow do
   end
 
   defp detect_role_from_context(context_id) do
-     if context_id do
-        case Memory.list(context_id, limit: 10) do
-          {:ok, memories} ->
-            raw_role = Enum.find_value(memories, fn m ->
+    if context_id do
+      case Memory.list(context_id, limit: 10) do
+        {:ok, memories} ->
+          raw_role =
+            Enum.find_value(memories, fn m ->
               case Regex.run(~r/actor[^\w]*\s+(\w+)/i, m.content) do
                 [_, role] -> String.downcase(role)
                 _ -> nil
               end
             end)
-            
-            normalize_role(raw_role)
-          _ -> nil
-        end
-     end
+
+          normalize_role(raw_role)
+
+        _ ->
+          nil
+      end
+    end
   end
-  
+
   defp normalize_role("claude"), do: :planner
   defp normalize_role("human"), do: :planner
   defp normalize_role("antigravity"), do: :coder
   defp normalize_role("gemini"), do: :coder
   defp normalize_role("cursor"), do: :coder
   defp normalize_role(_), do: nil
-  
+
   defp detect_role_from_actor do
     raw = get_current_actor()
     normalize_role(String.downcase(raw))
   end
-  
+
   defp get_current_actor do
-     # This would ideally come from the tool args or session context
-     # defaulting to antigravity for this agent
-     "antigravity" 
+    # This would ideally come from the tool args or session context
+    # defaulting to antigravity for this agent
+    "antigravity"
   end
 
   # --- Formatting ---
@@ -264,30 +269,32 @@ defmodule DiwaAgent.Tools.Flow do
   defp format_flow_response(role, result, state) do
     role_str = String.capitalize(to_string(role))
     prio_str = String.upcase(to_string(result.priority))
-    
-    icon = case result.priority do
-      :p0 -> "🚨"
-      :p1 -> "⚡"
-      :p2 -> "🌊"
-      _ -> "🌱"
-    end
-    
-    files_note = if state.recent_files != [] do
-       files = Enum.join(state.recent_files, ", ")
-       "\n   Context: #{length(state.recent_files)} active files (#{files})"
-    else 
-       ""
-    end
+
+    icon =
+      case result.priority do
+        :p0 -> "🚨"
+        :p1 -> "⚡"
+        :p2 -> "🌊"
+        _ -> "🌱"
+      end
+
+    files_note =
+      if state.recent_files != [] do
+        files = Enum.join(state.recent_files, ", ")
+        "\n   Context: #{length(state.recent_files)} active files (#{files})"
+      else
+        ""
+      end
 
     """
     #{icon} **DIWA FLOW**: #{role_str} Mode (#{prio_str})
-    
+
     **Recommended Action**: `#{result.type}`
     > #{result.reason}
-    
+
     👉 **Run**: `#{result.cmd}`
     #{files_note}
-    
+
     *Alternates:*
     • #{result.desc}
     """

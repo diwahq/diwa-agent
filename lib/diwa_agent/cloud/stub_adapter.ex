@@ -3,7 +3,7 @@ defmodule DiwaAgent.Cloud.StubAdapter do
   Stub implementation of the Diwa Cloud Adapter for development/offline use.
   """
   @behaviour DiwaAgent.Cloud.Adapter
-  
+
   require Logger
 
   @impl true

@@ -50,11 +50,12 @@ defmodule DiwaAgent.Storage.Backup do
     # Check root directory first, then fallback to local scripts (legacy)
     root_script = Path.expand("../backup_db.sh")
     local_script = Path.expand("scripts/backup_db.sh")
-    
+
     script_path = if File.exists?(root_script), do: root_script, else: local_script
-    
+
     if File.exists?(script_path) do
       Logger.info("[Backup] Triggering SQL backup script...")
+
       try do
         {output, 0} = System.cmd("bash", [script_path], stderr_to_stdout: true)
         Logger.info("[Backup] SQL Backup Success: #{String.trim(output)}")

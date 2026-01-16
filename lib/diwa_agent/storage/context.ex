@@ -38,7 +38,9 @@ defmodule DiwaAgent.Storage.Context do
       {:ok, context} ->
         spawn_cloud_sync_task(context)
         {:ok, context}
-      error -> error
+
+      error ->
+        error
     end
   end
 
@@ -100,7 +102,9 @@ defmodule DiwaAgent.Storage.Context do
           {:ok, updated} ->
             spawn_cloud_sync_task(updated)
             {:ok, updated}
-          error -> error
+
+          error ->
+            error
         end
     end
   end
@@ -201,7 +205,7 @@ defmodule DiwaAgent.Storage.Context do
         id
     end
   end
-  
+
   defp spawn_cloud_sync_task(context) do
     if System.get_env("DIWA_ENABLE_CLOUD_SYNC") == "true" do
       # Convert context struct to a plain map for JSON serialization

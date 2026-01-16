@@ -5,14 +5,14 @@ adapter = Application.get_env(:diwa_agent, DiwaAgent.Repo)[:adapter]
 if adapter == Ecto.Adapters.Postgres do
   database_url =
     System.get_env("DATABASE_URL") ||
-      (if config_env() == :prod do
-         raise """
-         environment variable DATABASE_URL is missing.
-         For example: postgres://username:password@localhost/diwa_agent
-         """
-       else
-         nil
-       end)
+      if config_env() == :prod do
+        raise """
+        environment variable DATABASE_URL is missing.
+        For example: postgres://username:password@localhost/diwa_agent
+        """
+      else
+        nil
+      end
 
   if database_url do
     config :diwa_agent, DiwaAgent.Repo,

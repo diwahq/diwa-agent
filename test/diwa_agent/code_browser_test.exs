@@ -23,7 +23,8 @@ defmodule DiwaAgent.CodeBrowserTest do
   test "read_file/2 respects line limits" do
     {:ok, file} = CodeBrowser.read_file(@root_path, "mix.exs", start_line: 1, end_line: 1)
     assert file.content =~ "defmodule"
-    assert file.total_lines > 0 # Total lines of original file
+    # Total lines of original file
+    assert file.total_lines > 0
     assert length(String.split(file.content, "\n")) == 1
   end
 

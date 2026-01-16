@@ -15,10 +15,10 @@ defmodule DiwaAgent.Tools.Definitions do
       list_contexts(),
       get_context(),
       list_organizations(),
-      get_context_health(),
-      run_context_scan(),
-      list_conflicts(),
-      resolve_conflict(),
+      # REMOVED: get_context_health() - Patent D1 (Enterprise only)
+      # REMOVED: run_context_scan() - Patent D2 (Enterprise only)
+      # REMOVED: list_conflicts() - Patent D3 (Enterprise only)
+      # REMOVED: resolve_conflict() - Patent D3 (Enterprise only)
       update_context(),
       delete_context(),
 
@@ -63,19 +63,19 @@ defmodule DiwaAgent.Tools.Definitions do
       link_memories(),
       get_memory_tree(),
 
-      # Agent Coordination (Phase 1.4)
-      register_agent(),
-      match_experts(),
-      poll_delegated_tasks(),
-      delegate_task(),
-      respond_to_delegation(),
-      complete_delegation(),
+      # Agent Coordination (Phase 1.4) - Community Edition has basic delegation
+      # REMOVED: register_agent() - SINAG runtime (Enterprise only)
+      # REMOVED: match_experts() - SINAG runtime (Enterprise only)
+      # REMOVED: poll_delegated_tasks() - SINAG runtime (Enterprise only)
+      # REMOVED: delegate_task() - SINAG runtime (Enterprise only)
+      # REMOVED: respond_to_delegation() - SINAG runtime (Enterprise only)
+      # REMOVED: complete_delegation() - SINAG runtime (Enterprise only)
 
-      # SINAG Lifecycle Tools (Phase 3.2)
-      get_agent_health(),
-      restore_agent(),
-      log_failure(),
-      purge_old_checkpoints(),
+      # SINAG Lifecycle Tools (Phase 3.2) - Enterprise only
+      # REMOVED: get_agent_health() - SINAG runtime (Enterprise only)
+      # REMOVED: restore_agent() - SINAG runtime (Enterprise only)
+      # REMOVED: log_failure() - SINAG runtime (Enterprise only)
+      # REMOVED: purge_old_checkpoints() - SINAG runtime (Enterprise only)
 
       # Ledger and Rollback Tools (Phase 3.1)
       get_memory_history(),
@@ -83,10 +83,10 @@ defmodule DiwaAgent.Tools.Definitions do
       compare_memory_versions(),
       get_recent_changes(),
 
-      # Distributed Consensus Tools (Phase 3)
-      arbitrate_conflict(),
-      get_cluster_status(),
-      get_byzantine_nodes(),
+      # Distributed Consensus Tools (Phase 3) - Enterprise only
+      # REMOVED: arbitrate_conflict() - Patent D3 (Enterprise only)
+      # REMOVED: get_cluster_status() - Cluster consensus (Enterprise only)
+      # REMOVED: get_byzantine_nodes() - Cluster consensus (Enterprise only)
 
       # Shortcut Interpreter Tools (Phase 4)
       execute_shortcut(),
@@ -102,7 +102,7 @@ defmodule DiwaAgent.Tools.Definitions do
       hydrate_context(),
       validate_action(),
       prune_expired_memories(),
-      
+
       # UGAT Tools (Context Intelligence Backbone)
       detect_context(),
       bind_context(),
@@ -129,7 +129,7 @@ defmodule DiwaAgent.Tools.Definitions do
       get_client_instructions(),
       determine_workflow(),
       queue_handoff_item(),
- 
+
       # UGAT Onboarding
       confirm_binding()
     ]
@@ -163,17 +163,20 @@ defmodule DiwaAgent.Tools.Definitions do
   defp start_session do
     %{
       name: "start_session",
-      description: "Detect project context from current directory and retrieve session resume with handoff, pending tasks, and shortcuts",
+      description:
+        "Detect project context from current directory and retrieve session resume with handoff, pending tasks, and shortcuts",
       inputSchema: %{
         type: "object",
         properties: %{
           path: %{
             type: "string",
-            description: "Directory path to detect context from. Client should pass actual filesystem path."
+            description:
+              "Directory path to detect context from. Client should pass actual filesystem path."
           },
           git_remote: %{
             type: "string",
-            description: "Git remote URL. If omitted, auto-detected via 'git remote get-url origin'."
+            description:
+              "Git remote URL. If omitted, auto-detected via 'git remote get-url origin'."
           },
           depth: %{
             type: "string",
@@ -190,7 +193,8 @@ defmodule DiwaAgent.Tools.Definitions do
           },
           client_type: %{
             type: "string",
-            description: "Type of client (e.g., 'antigravity') for self-configuration instructions"
+            description:
+              "Type of client (e.g., 'antigravity') for self-configuration instructions"
           }
         },
         additionalProperties: false
@@ -333,8 +337,16 @@ defmodule DiwaAgent.Tools.Definitions do
             type: "string",
             description: "Optional severity level (information, low, moderate, high, critical)"
           },
-          buffer: %{type: "boolean", description: "If true, buffer the operation for TALA instead of executing immediately", default: false},
-          session_id: %{type: "string", description: "The UUID of the active session (required if buffer=true)"}
+          buffer: %{
+            type: "boolean",
+            description:
+              "If true, buffer the operation for TALA instead of executing immediately",
+            default: false
+          },
+          session_id: %{
+            type: "string",
+            description: "The UUID of the active session (required if buffer=true)"
+          }
         },
         required: ["context_id", "content"]
       }
@@ -961,85 +973,11 @@ defmodule DiwaAgent.Tools.Definitions do
     }
   end
 
-  defp get_context_health do
-    %{
-      name: "get_context_health",
-      description: "Get the health score and breakdown for a context (Patent #1: Health Engine)",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{type: "string", description: "The UUID of the project context"}
-        },
-        required: ["context_id"]
-      }
-    }
-  end
+  # REMOVED: get_context_health - Patent D1 (Enterprise only)
 
-  defp run_context_scan do
-    %{
-      name: "run_context_scan",
-      description: "Automatically extract architectural facts from source code (Patent #2: ACE)",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{type: "string", description: "The UUID of the project context"},
-          path: %{
-            type: "string",
-            description: "Directory path to scan (defaults to project root)"
-          }
-        },
-        required: ["context_id"]
-      }
-    }
-  end
-
-  defp list_conflicts do
-    %{
-      name: "list_conflicts",
-      description: "Detect contradictory or overlapping information in the context (Patent #3)",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{type: "string", description: "The UUID of the project context"}
-        },
-        required: ["context_id"]
-      }
-    }
-  end
-
-  defp resolve_conflict do
-    %{
-      name: "resolve_conflict",
-      description:
-        "Resolve a detected knowledge collision by keeping, discarding, or merging memories. Supports manual ID selection or predefined strategies.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{type: "string", description: "The UUID of the project context"},
-          strategy: %{
-            type: "string",
-            enum: ["auto", "keep_latest", "keep_original"],
-            description: "Resolution strategy to apply (Tier 1/2)"
-          },
-          keep_ids: %{
-            type: "array",
-            items: %{type: "string"},
-            description: "List of Memory IDs to keep as valid (Manual mode)"
-          },
-          discard_ids: %{
-            type: "array",
-            items: %{type: "string"},
-            description: "List of Memory IDs to archive/delete (Manual mode)"
-          },
-          reason: %{
-            type: "string",
-            description: "Optional rationale for the resolution"
-          }
-        },
-        required: ["context_id"]
-      }
-    }
-  end
+  # REMOVED: run_context_scan - Patent D2 (Enterprise only)
+  # REMOVED: list_conflicts - Patent D3 (Enterprise only)
+  # REMOVED: resolve_conflict - Patent D3 (Enterprise only)
 
   defp perform_backup do
     %{
@@ -1052,124 +990,13 @@ defmodule DiwaAgent.Tools.Definitions do
     }
   end
 
-  defp register_agent do
-    %{
-      name: "register_agent",
-      description: "Register an autonomous agent with the Diwa Registry. Returns an Agent ID.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          name: %{type: "string", description: "Name of the agent (e.g. 'Senior Coder')"},
-          role: %{
-            type: "string",
-            description: "Role/Responsibility (coding, qa, architect, general)"
-          },
-          capabilities: %{
-            type: "array",
-            items: %{type: "string"},
-            description: "List of capabilities (e.g. ['elixir', 'testing', 'security'])"
-          }
-        },
-        required: ["name", "role", "capabilities"]
-      }
-    }
-  end
-
-  defp match_experts do
-    %{
-      name: "match_experts",
-      description: "Find available agents with specific capabilities.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          capabilities: %{
-            type: "array",
-            items: %{type: "string"},
-            description: "List of required capability tokens"
-          }
-        },
-        required: ["capabilities"]
-      }
-    }
-  end
-
-  defp poll_delegated_tasks do
-    %{
-      name: "poll_delegated_tasks",
-      description: "Poll for pending tasks delegated to this agent. Returns a list of tasks.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          agent_id: %{type: "string", description: "The ID of the agent polling for work"}
-        },
-        required: ["agent_id"]
-      }
-    }
-  end
-
-  defp delegate_task do
-    %{
-      name: "delegate_task",
-      description: "Delegate a task to another agent. Returns a delegation reference ID.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          from_agent_id: %{type: "string", description: "ID of the agent sending the task"},
-          to_agent_id: %{
-            type: "string",
-            description: "ID of the target agent (optional if role specified)"
-          },
-          context_id: %{type: "string", description: "The context this task belongs to"},
-          task_definition: %{type: "string", description: "Description of the task to perform"},
-          constraints: %{
-            type: "object",
-            description: "Key-value constraints (e.g. timeout, scope)"
-          }
-        },
-        required: ["from_agent_id", "context_id", "task_definition"]
-      }
-    }
-  end
-
-  defp respond_to_delegation do
-    %{
-      name: "respond_to_delegation",
-      description: "Accept or reject a delegated task.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          delegation_id: %{type: "string", description: "The ID of the delegation"},
-          status: %{
-            type: "string",
-            enum: ["accepted", "rejected"],
-            description: "Response status"
-          },
-          reason: %{type: "string", description: "Optional reason for rejection"}
-        },
-        required: ["delegation_id", "status"]
-      }
-    }
-  end
-
-  defp complete_delegation do
-    %{
-      name: "complete_delegation",
-      description: "Mark a delegated task as complete and provide results.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          delegation_id: %{type: "string", description: "The ID of the completed delegation"},
-          result_summary: %{type: "string", description: "Summary of the work done or findings"},
-          artifacts: %{
-            type: "array",
-            items: %{type: "string"},
-            description: "List of artifacts produced (file paths, memory IDs)"
-          }
-        },
-        required: ["delegation_id", "result_summary"]
-      }
-    }
-  end
+  # REMOVED: SINAG Runtime Tools (Enterprise only)
+  # - register_agent
+  # - match_experts
+  # - poll_delegated_tasks
+  # - delegate_task
+  # - respond_to_delegation
+  # - complete_delegation
 
   defp get_memory_history do
     %{
@@ -1231,147 +1058,16 @@ defmodule DiwaAgent.Tools.Definitions do
     }
   end
 
-  defp get_agent_health do
-    %{
-      name: "get_agent_health",
-      description: "Get aggregate metrics and status for a SINAG agent",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          agent_id: %{type: "string", description: "UUID or name of the agent"},
-          context_id: %{type: "string", description: "The context the agent is working in"}
-        },
-        required: ["agent_id", "context_id"]
-      }
-    }
-  end
+  # REMOVED: SINAG Lifecycle Tools (Enterprise only)
+  # - get_agent_health
+  # - restore_agent
+  # - log_failure
+  # - purge_old_checkpoints
 
-  defp restore_agent do
-    %{
-      name: "restore_agent",
-      description: "Re-hydrate agent state from the last valid checkpoint",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          agent_id: %{type: "string"},
-          context_id: %{type: "string"}
-        },
-        required: ["agent_id", "context_id"]
-      }
-    }
-  end
-
-  defp log_failure do
-    %{
-      name: "log_failure",
-      description: "Record a structured crash dump or failure event for an agent",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          agent_id: %{type: "string"},
-          context_id: %{type: "string"},
-          error_category: %{
-            type: "string",
-            description: "e.g. timeout, crash, hallucination, tool_error"
-          },
-          severity: %{type: "string", enum: ["low", "moderate", "high", "critical"]},
-          stack_trace: %{type: "string"},
-          metadata: %{type: "object"}
-        },
-        required: ["agent_id", "context_id", "error_category", "severity"]
-      }
-    }
-  end
-
-  defp purge_old_checkpoints do
-    %{
-      name: "purge_old_checkpoints",
-      description: "Cleanup tool to remove old checkpoints according to retention policy",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{type: "string"},
-          retention_days: %{type: "integer", default: 7}
-        },
-        required: ["context_id"]
-      }
-    }
-  end
-
-  defp arbitrate_conflict do
-    %{
-      name: "arbitrate_conflict",
-      description:
-        "Initiate distributed conflict arbitration using Raft consensus. Coordinates resolution across multiple nodes with Byzantine fault tolerance.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          context_id: %{
-            type: "string",
-            description: "UUID of the context containing the conflict"
-          },
-          conflict_id: %{
-            type: "string",
-            description: "UUID of the conflict to arbitrate"
-          },
-          participants: %{
-            type: "array",
-            items: %{type: "string"},
-            description:
-              "List of node IDs to participate in arbitration (optional, defaults to all cluster nodes)"
-          },
-          timeout_ms: %{
-            type: "integer",
-            description: "Timeout in milliseconds for arbitration (default: 5000)",
-            default: 5000
-          }
-        },
-        required: ["context_id", "conflict_id"]
-      }
-    }
-  end
-
-  defp get_cluster_status do
-    %{
-      name: "get_cluster_status",
-      description:
-        "Get the current status of the distributed consensus cluster, including membership, health, and leader information.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          include_metrics: %{
-            type: "boolean",
-            description: "Include detailed performance metrics (default: false)",
-            default: false
-          }
-        }
-      }
-    }
-  end
-
-  defp get_byzantine_nodes do
-    %{
-      name: "get_byzantine_nodes",
-      description:
-        "List nodes that have been identified as Byzantine (faulty/malicious) and their suspicion levels. Includes quarantined nodes and those under investigation.",
-      inputSchema: %{
-        type: "object",
-        properties: %{
-          min_suspicion_level: %{
-            type: "string",
-            enum: ["none", "low", "medium", "high", "confirmed"],
-            description: "Minimum suspicion level to include (default: medium)",
-            default: "medium"
-          },
-          include_history: %{
-            type: "boolean",
-            description: "Include behavior history for each node (default: false)",
-            default: false
-          }
-        }
-      }
-    }
-  end
+  # REMOVED: Conflict & Consensus Tools (Enterprise only)
+  # - arbitrate_conflict
+  # - get_cluster_status
+  # - get_byzantine_nodes
 
   # --- Shortcut Interpreter Tools ---
 
@@ -1471,8 +1167,6 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
-
-
 
   defp log_session_activity do
     %{
@@ -1575,7 +1269,7 @@ defmodule DiwaAgent.Tools.Definitions do
         type: "object",
         properties: %{
           type: %{
-            type: "string", 
+            type: "string",
             description: "The type of binding to check (git_remote, path, env_var)"
           },
           value: %{
@@ -1591,7 +1285,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp bind_context do
     %{
       name: "bind_context",
-      description: "Bind a context to a specific environment trigger (e.g. this git repo maps to this context).",
+      description:
+        "Bind a context to a specific environment trigger (e.g. this git repo maps to this context).",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1642,7 +1337,10 @@ defmodule DiwaAgent.Tools.Definitions do
         properties: %{
           source_context_id: %{type: "string", description: "The source context UUID"},
           target_context_id: %{type: "string", description: "The target context UUID"},
-          relationship_type: %{type: "string", description: "Type of relationship (depends_on, relates_to, child_of, blocks)"},
+          relationship_type: %{
+            type: "string",
+            description: "Type of relationship (depends_on, relates_to, child_of, blocks)"
+          },
           metadata: %{type: "string", description: "Optional JSON metadata"}
         },
         required: ["source_context_id", "target_context_id", "relationship_type"]
@@ -1657,7 +1355,10 @@ defmodule DiwaAgent.Tools.Definitions do
       inputSchema: %{
         type: "object",
         properties: %{
-          relationship_id: %{type: "string", description: "The UUID of the relationship to remove"}
+          relationship_id: %{
+            type: "string",
+            description: "The UUID of the relationship to remove"
+          }
         },
         required: ["relationship_id"]
       }
@@ -1672,12 +1373,17 @@ defmodule DiwaAgent.Tools.Definitions do
         type: "object",
         properties: %{
           context_id: %{type: "string", description: "The UUID of the context"},
-          direction: %{type: "string", enum: ["outgoing", "incoming", "both"], description: "Direction of relationships"}
+          direction: %{
+            type: "string",
+            enum: ["outgoing", "incoming", "both"],
+            description: "Direction of relationships"
+          }
         },
         required: ["context_id"]
       }
     }
   end
+
   defp get_context_graph do
     %{
       name: "get_context_graph",
@@ -1685,12 +1391,15 @@ defmodule DiwaAgent.Tools.Definitions do
       inputSchema: %{
         type: "object",
         properties: %{
-          root_id: %{type: "string", description: "The UUID of the root context to start traversal"},
+          root_id: %{
+            type: "string",
+            description: "The UUID of the root context to start traversal"
+          },
           depth: %{type: "integer", description: "Maximum depth of traversal (default: 3)"},
           format: %{
-             type: "string", 
-             enum: ["mermaid", "json", "list"],
-             description: "Output format (default: mermaid)"
+            type: "string",
+            enum: ["mermaid", "json", "list"],
+            description: "Output format (default: mermaid)"
           }
         },
         required: ["root_id"]
@@ -1701,7 +1410,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp get_dependency_chain do
     %{
       name: "get_dependency_chain",
-      description: "Retrieve a topologically sorted list of dependencies for a context (Build Order).",
+      description:
+        "Retrieve a topologically sorted list of dependencies for a context (Build Order).",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1732,12 +1442,13 @@ defmodule DiwaAgent.Tools.Definitions do
   defp navigate_contexts do
     %{
       name: "navigate_contexts",
-      description: "Interactive navigation of the context graph (ls-style). Supports listing, tree view, and detailed inspection.",
+      description:
+        "Interactive navigation of the context graph (ls-style). Supports listing, tree view, and detailed inspection.",
       inputSchema: %{
         type: "object",
         properties: %{
           context_id: %{
-            type: "string", 
+            type: "string",
             description: "The ID of the context you are currently 'inside' (PWD)"
           },
           target_path: %{
@@ -1745,7 +1456,7 @@ defmodule DiwaAgent.Tools.Definitions do
             description: "Path to navigate to (e.g., '.', '..', 'child_name', or absolute ID)"
           },
           mode: %{
-            type: "string", 
+            type: "string",
             enum: ["list", "tree", "detail"],
             description: "View mode: 'list' (ls), 'tree' (tree), 'detail' (stat)"
           }
@@ -1754,10 +1465,12 @@ defmodule DiwaAgent.Tools.Definitions do
       }
     }
   end
+
   defp analyze_impact do
     %{
       name: "analyze_impact",
-      description: "Identifies all downstream contexts impacted by a change to the target context.",
+      description:
+        "Identifies all downstream contexts impacted by a change to the target context.",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1786,7 +1499,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp commit_buffer do
     %{
       name: "commit_buffer",
-      description: "Flush the TALA buffer and execute all pending operations in a single transaction (Transactional Accumulation & Lazy Apply)",
+      description:
+        "Flush the TALA buffer and execute all pending operations in a single transaction (Transactional Accumulation & Lazy Apply)",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1811,18 +1525,18 @@ defmodule DiwaAgent.Tools.Definitions do
     }
   end
 
-
-
   defp get_client_instructions do
     %{
       name: "get_client_instructions",
-      description: "Retrieve system prompt snippets for MCP clients to self-configure DIWA conventions (shortcuts, session workflow).",
+      description:
+        "Retrieve system prompt snippets for MCP clients to self-configure DIWA conventions (shortcuts, session workflow).",
       inputSchema: %{
         type: "object",
         properties: %{
           client_type: %{
             type: "string",
-            description: "Type of client requesting instructions (e.g., 'antigravity', 'cursor', 'claude-desktop')"
+            description:
+              "Type of client requesting instructions (e.g., 'antigravity', 'cursor', 'claude-desktop')"
           },
           sections: %{
             type: "array",
@@ -1845,7 +1559,8 @@ defmodule DiwaAgent.Tools.Definitions do
   defp confirm_binding do
     %{
       name: "confirm_binding",
-      description: "Handles user choice for binding a context to a detected path or git remote. Part of the UGAT onboarding flow.",
+      description:
+        "Handles user choice for binding a context to a detected path or git remote. Part of the UGAT onboarding flow.",
       inputSchema: %{
         type: "object",
         properties: %{
@@ -1978,14 +1693,15 @@ defmodule DiwaAgent.Tools.Definitions do
   defp queue_handoff_item do
     %{
       name: "queue_handoff_item",
-      description: "Queue a specific note or accomplishment to be included in the next handoff note.",
+      description:
+        "Queue a specific note or accomplishment to be included in the next handoff note.",
       inputSchema: %{
         type: "object",
         properties: %{
           context_id: %{type: "string", description: "The UUID of the project context"},
           message: %{type: "string", description: "The item to queue for the next handoff"},
           category: %{
-            type: "string", 
+            type: "string",
             enum: ["accomplishment", "next_step", "blocker", "decision"],
             default: "accomplishment"
           }

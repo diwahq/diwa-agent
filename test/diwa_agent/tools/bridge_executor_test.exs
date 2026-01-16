@@ -24,12 +24,12 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       }
 
       result = Executor.execute("set_project_status", args)
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "updated to 'Implementation' (45%)"
 
       # Get status
       get_res = Executor.execute("get_project_status", %{"context_id" => context.id})
-      assert %{ "content" => [%{ "type" => "text",  "text" => get_text}]} = get_res
+      assert %{"content" => [%{"type" => "text", "text" => get_text}]} = get_res
       assert get_text =~ "Implementation"
       assert get_text =~ "45%"
       assert get_text =~ "Halfway there"
@@ -45,7 +45,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       }
 
       result = Executor.execute("add_requirement", args)
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Requirement added: 'FTS5 Search'"
 
       # Extract ID from text (simple hack for test)
@@ -53,7 +53,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
 
       # Mark complete
       comp_res = Executor.execute("mark_requirement_complete", %{"requirement_id" => req_id})
-      assert %{ "content" => [%{ "type" => "text",  "text" => comp_text}]} = comp_res
+      assert %{"content" => [%{"type" => "text", "text" => comp_text}]} = comp_res
       assert comp_text =~ "marked as complete"
 
       # Verify content updated
@@ -72,12 +72,12 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       }
 
       result = Executor.execute("record_lesson", args)
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Lesson recorded: 'NIF Loading'"
 
       # Search lessons
       search_res = Executor.execute("search_lessons", %{"query" => "escript"})
-      assert %{ "content" => [%{ "type" => "text",  "text" => search_text}]} = search_res
+      assert %{"content" => [%{"type" => "text", "text" => search_text}]} = search_res
       assert search_text =~ "NIF Loading"
       assert search_text =~ "Architecture"
     end
@@ -92,7 +92,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       }
 
       result = Executor.execute("flag_blocker", args)
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "BLOCKER FLAGGED"
 
       [_, blocker_id] = Regex.run(~r/ID: ([\w-]+)/, text)
@@ -104,7 +104,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       }
 
       res_result = Executor.execute("resolve_blocker", res_args)
-      assert %{ "content" => [%{ "type" => "text",  "text" => res_text}]} = res_result
+      assert %{"content" => [%{"type" => "text", "text" => res_text}]} = res_result
       assert res_text =~ "marked as resolved"
 
       # Verify content
@@ -123,12 +123,12 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
       }
 
       result = Executor.execute("set_handoff_note", args)
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Handoff recorded"
 
       # Get handoff
       get_res = Executor.execute("get_active_handoff", %{"context_id" => context.id})
-      assert %{ "content" => [%{ "type" => "text",  "text" => get_text}]} = get_res
+      assert %{"content" => [%{"type" => "text", "text" => get_text}]} = get_res
       assert get_text =~ "Wrapped up tools"
       assert get_text =~ "Docs"
       assert get_text =~ "executor.ex"
@@ -152,7 +152,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
 
       # Get pending tasks
       result = Executor.execute("get_pending_tasks", %{"context_id" => context.id, "limit" => 5})
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
 
       # Should be ordered High -> Low
       assert text =~ "High Priority"
@@ -168,7 +168,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
           "tags" => "testing"
         })
 
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
       assert text =~ "Progress logged: Implemented tests"
     end
 
@@ -199,7 +199,7 @@ defmodule DiwaAgent.Tools.BridgeExecutorTest do
 
       # Get Resume Context
       result = Executor.execute("get_resume_context", %{"context_id" => context.id})
-      assert %{ "content" => [%{ "type" => "text",  "text" => text}]} = result
+      assert %{"content" => [%{"type" => "text", "text" => text}]} = result
 
       assert text =~ "SESSION START CONTEXT"
       # Handoff

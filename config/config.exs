@@ -15,8 +15,13 @@ config :diwa_agent,
   cloud_api_url: "https://api.diwa.one",
 
   # Feature flags
-  auto_migrate: true,  # Disable to prevent slow startup on escript
-  create_default_org: true
+  # Disable to prevent slow startup on escript
+  auto_migrate: true,
+  create_default_org: true,
+
+  # Edition control - Community Edition licensing (Apache 2.0)
+  # Enterprise features (Patents D1, D2, D3, SINAG) are in diwa-cloud (BSL 1.1)
+  enterprise_features: false
 
 config :diwa_agent, DiwaAgent.Repo,
   adapter: Ecto.Adapters.SQLite3,

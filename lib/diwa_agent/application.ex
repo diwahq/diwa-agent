@@ -12,30 +12,40 @@ defmodule DiwaAgent.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Database
-      DiwaAgent.Repo,
+    children =
+      [
+        # Database
+        DiwaAgent.Repo,
 
-      # Task Supervisor for async tasks
-      {Task.Supervisor, name: DiwaAgent.TaskSupervisor},
+        # Task Supervisor for async tasks
+        {Task.Supervisor, name: DiwaAgent.TaskSupervisor},
 
-      # Agent and Shortcut Registries
-      DiwaAgent.Registry.Server,
-      DiwaAgent.Shortcuts.Registry,
-      DiwaAgent.Delegation.Broker,
+        # Agent and Shortcut Registries
+        DiwaAgent.Registry.Server,
+        DiwaAgent.Shortcuts.Registry,
+        DiwaAgent.Delegation.Broker,
 
-      # Cloud Synchronization Worker
-      DiwaAgent.Cloud.SyncWorker,
+        # Cloud Synchronization Worker
+        DiwaAgent.Cloud.SyncWorker,
 
-      # TALA Buffer (Transactional Accumulation & Lazy Apply)
-      DiwaAgent.Tala.Buffer,
+        # TALA Buffer (Transactional Accumulation & Lazy Apply)
+        DiwaAgent.Tala.Buffer,
 
-      # MCP Server (Must start before Transport to handle initial messages)
-      DiwaAgent.Server,
+        # Handoff Artifact Queue
+        DiwaAgent.Workflow.ArtifactQueue,
 
-      # Transport (Stdio)
-      DiwaAgent.Transport.Stdio
-    ]
+        # MCP Server (Must start before Transport to handle initial messages)
+        DiwaAgent.Server,
+
+        # Transport (Stdio)
+        # Only start if not disabled via env var (e.g. when running in Diwa Cloud)
+        if System.get_env("DIWA_DISABLE_TRANSPORT") != "true" do
+          {DiwaAgent.Transport.Stdio, []}
+        else
+          nil
+        end
+      ]
+      |> Enum.reject(&is_nil(&1))
 
     opts = [strategy: :one_for_one, name: DiwaAgent.Supervisor]
 
@@ -55,18 +65,23 @@ defmodule DiwaAgent.Application do
   defp migrate do
     # Run migrations on startup (for escript/release mode)
     # Suppress all output to prevent stdout pollution in MCP protocol
-    Logger.configure(level: :none)
-    
+    # and ensure any residual logs go to stderr
+    Logger.configure(level: :warning)
+    Logger.configure_backend(:console, device: :standard_error)
+
     try do
-      {:ok, _, _} = Ecto.Migrator.with_repo(DiwaAgent.Repo, &Ecto.Migrator.run(&1, :up, all: true))
+      # Note: with_repo/2 takes an optional logger option since Ecto 3.9
+      # but if not available we rely on Logger.configure_backend
+      {:ok, _, _} =
+        Ecto.Migrator.with_repo(DiwaAgent.Repo, fn repo ->
+          # Log via Logger
+          Ecto.Migrator.run(repo, :up, all: true, log: :debug)
+        end)
     rescue
       e ->
         # Log to stderr only
-        Logger.configure(level: :warning)
         Logger.error("[DiwaAgent] Migration failed: #{Exception.message(e)}")
         :ok
-    after
-      Logger.configure(level: :warning)
     end
   end
 

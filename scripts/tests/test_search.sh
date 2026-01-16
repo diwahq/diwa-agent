@@ -6,8 +6,11 @@ echo " Testing search_memories Tool"
 echo "════════════════════════════════════════════════════════"
 echo ""
 
+# Define DB path for consistent testing
+export DATABASE_PATH="$HOME/.diwa/diwa_agent.db"
+
 # Clean database
-rm -rf ~/.diwa/diwa.db 2>/dev/null
+rm -rf "$DATABASE_PATH" 2>/dev/null
 
 run_test() {
   local name="$1"
@@ -46,7 +49,7 @@ run_test "Create context 'Phoenix Project'" \
   '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_context","arguments":{"name":"Phoenix Project","description":"Web development"}}}'
 
 # Get context ID
-CONTEXT_ID=$(sqlite3 ~/.diwa/diwa.db "SELECT id FROM contexts LIMIT 1" 2>/dev/null)
+CONTEXT_ID=$(sqlite3 "$DATABASE_PATH" "SELECT id FROM contexts LIMIT 1" 2>/dev/null)
 
 if [ -n "$CONTEXT_ID" ]; then
   echo "✓ Context ID: $CONTEXT_ID"
@@ -90,6 +93,6 @@ echo " Test Complete!"
 echo "════════════════════════════════════════════════════════"
 echo ""
 echo "Database stats:"
-sqlite3 ~/.diwa/diwa.db "SELECT COUNT(*) || ' memories' FROM memories" 2>/dev/null
+sqlite3 "$DATABASE_PATH" "SELECT COUNT(*) || ' memories' FROM memories" 2>/dev/null
 echo ""
 echo "✓ search_memories tool is working!"

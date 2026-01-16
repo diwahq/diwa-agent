@@ -78,12 +78,13 @@ defmodule DiwaAgent.Tala.Buffer do
   def handle_call({:list, session_id}, _from, state) do
     # Try to load from memory first, fallback to DB if memory empty (e.g. after restart)
     buffer = Map.get(state.buffers, session_id)
-    
-    buffer = if is_nil(buffer) do
-      load_from_db(session_id)
-    else
-      buffer
-    end
+
+    buffer =
+      if is_nil(buffer) do
+        load_from_db(session_id)
+      else
+        buffer
+      end
 
     {:reply, buffer, state}
   end
@@ -124,7 +125,7 @@ defmodule DiwaAgent.Tala.Buffer do
 
   defp load_from_db(session_id) do
     import Ecto.Query
-    
+
     DiwaAgent.Tala.Operation
     |> where(session_id: ^session_id, status: "pending")
     |> order_by(asc: :inserted_at)
@@ -133,7 +134,7 @@ defmodule DiwaAgent.Tala.Buffer do
 
   defp delete_from_db(session_id) do
     import Ecto.Query
-    
+
     DiwaAgent.Tala.Operation
     |> where(session_id: ^session_id, status: "pending")
     |> Repo.delete_all()

@@ -19,7 +19,7 @@ defmodule DiwaAgent.Shortcuts.ParserTest do
     test "fails without valid prefix" do
       assert {:error, :missing_prefix} = Parser.tokenize("bug command")
     end
-    
+
     test "parses with @ prefix" do
       assert {:ok, "help", []} = Parser.tokenize("@help")
       assert {:ok, "bug", ["Title"]} = Parser.tokenize("@bug \"Title\"")

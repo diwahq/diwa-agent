@@ -22,10 +22,10 @@ defmodule DiwaAgent.Shortcuts.Executor do
       defaults = Map.get(definition, :defaults, %{})
       # Arguments provided by user override defaults
       merged_args = Map.merge(defaults, args_map)
-      
+
       # Add context_id implicitly if not present
       final_args = Map.put_new(merged_args, "context_id", context_id)
-      
+
       Logger.info("Executing shortcut tool: #{definition.tool} args: #{inspect(final_args)}")
       executor_mod.execute(definition.tool, final_args)
     end

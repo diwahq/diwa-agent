@@ -14,8 +14,8 @@ defmodule DiwaAgent.Transport.Stdio do
 
   def init(_opts) do
     # Configure stdout for reliable UTF-8 transmission
-    :io.setopts(:standard_io, [binary: true, encoding: :utf8])
-    
+    :io.setopts(:standard_io, binary: true, encoding: :utf8)
+
     # Start reading from stdin
     Task.start_link(fn -> read_loop() end)
 
@@ -31,7 +31,6 @@ defmodule DiwaAgent.Transport.Stdio do
 
       {:error, reason} ->
         Logger.error("[DiwaAgent.Transport.Stdio] Read error: #{inspect(reason)}")
-        # Don't halt immediately on error, allow recovery
         Process.sleep(100)
         read_loop()
 
@@ -51,7 +50,7 @@ defmodule DiwaAgent.Transport.Stdio do
       case DiwaAgent.Server.handle_message(line) do
         {:ok, response} ->
           send_response(response)
-  
+
         {:error, reason} ->
           Logger.error("[DiwaAgent.Transport.Stdio] Error handling message: #{inspect(reason)}")
       end
@@ -66,22 +65,24 @@ defmodule DiwaAgent.Transport.Stdio do
   defp send_response(nil), do: :ok
 
   defp send_response(response) do
-    # Use unicode_safe to ensure all characters are properly escaped
     json = Jason.encode!(response, escape: :unicode_safe)
-    
-    # Write directly to file descriptor 1 (stdout) to bypass group leaders
-    # and any potential I/O server pollution (like :user).
-    # This is CRITICAL for MCP.
-    :file.write(1, json <> "\n")
+
+    # Use IO.binwrite to standard_io which is configured for binary/utf8
+    # This proved more reliable than raw :file.write(1) in the current environment
+    IO.binwrite(:standard_io, json <> "\n")
   rescue
     e ->
       response_id = Map.get(response, "id")
-      msg = "[DiwaAgent.Transport.Stdio] JSON encoding failed for response ID: #{inspect(response_id)}. Error: #{inspect(e)}"
+
+      msg =
+        "[DiwaAgent.Transport.Stdio] JSON encoding failed for response ID: #{inspect(response_id)}. Error: #{inspect(e)}"
+
       IO.puts(:stderr, msg)
       Logger.error(msg)
-      
-      # Send a minimal error response directly to stdout
-      fallback = ~s({"jsonrpc":"2.0","id":#{inspect(response_id)},"error":{"code":-32603,"message":"Internal error: JSON encoding failed"}})
-      :file.write(1, fallback <> "\n")
+
+      fallback =
+        ~s({"jsonrpc":"2.0","id":#{inspect(response_id)},"error":{"code":-32603,"message":"Internal error: JSON encoding failed"}})
+
+      IO.binwrite(:standard_io, fallback <> "\n")
   end
 end
