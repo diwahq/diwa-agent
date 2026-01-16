@@ -91,7 +91,7 @@ Diwa Agent is the **Community Edition** of the Diwa ecosystem:
 | **Health Scoring** | ❌ | ✅ Patent #1 |
 | **License** | Apache 2.0 | BSL 1.1 |
 
-**For teams and advanced features**: See [Diwa Cloud](../diwa-cloud/README.md)
+**For teams and advanced features**: See [Diwa Cloud](https://diwa.one)
 
 ---
 
@@ -185,11 +185,17 @@ Diwa Agent implements the standard MCP stdio transport. Configure your client to
 
 ## 📖 Documentation
 
-- **[Getting Started](../docs/getting-started.md)**: Detailed setup and first steps
-- **[MCP Setup Guide](../docs/mcp-setup.md)**: Client-specific configuration
-- **[Migration Guide](../docs/MIGRATION_GUIDE.md)**: Upgrade to Diwa Cloud
-- **[Architecture](../docs/ARCHITECTURE.md)**: How Agent and Cloud relate
-- **[Data Format](../docs/DATA_FORMAT.md)**: Export/import specification
+- **[Getting Started](./docs/getting-started.md)**: Detailed setup and first steps
+- **[Core Concepts](./docs/concepts.md)**: Understanding Contexts, Memories, and Sessions
+- **[MCP Setup Guide](./docs/mcp-setup.md)**: Client-specific configuration
+- **[Tools Reference](./docs/TOOLS.md)**: Complete tool documentation
+- **[Workflows Guide](./docs/workflows.md)**: Practical usage examples
+- **[Shortcuts Reference](./docs/shortcuts.md)**: Quick command reference
+- **[Troubleshooting](./docs/TROUBLESHOOTING.md)**: Common issues and solutions
+- **[Installation](./docs/INSTALLATION.md)**: Detailed installation guide
+- **[Project Organization](./docs/PROJECT_ORGANIZATION.md)**: Best practices
+
+For a complete guide, start with the **[Documentation Index](./docs/README.md)**.
 
 ---
 
@@ -265,7 +271,7 @@ See [LICENSE](LICENSE) for full terms.
 
 - **Website**: [diwa.one](https://diwa.one)
 - **Documentation**: [docs/](../docs/)
-- **Enterprise Edition**: [diwa-cloud](../diwa-cloud/)
+- **Enterprise Edition**: [Diwa Cloud](https://diwa.one)
 - **MCP Specification**: [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 
 ---
