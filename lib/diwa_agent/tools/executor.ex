@@ -58,6 +58,18 @@ defmodule DiwaAgent.Tools.Executor do
     execute_list_handoff_queue(args)
   end
 
+  def execute("reorder_queue_item", args) do
+    execute_reorder_queue_item(args)
+  end
+
+  def execute("transmit_handoff", args) do
+    execute_transmit_handoff(args)
+  end
+
+  def execute("receive_handoff", args) do
+    execute_receive_handoff(args)
+  end
+
   def execute("get_shortcuts", %{"context_id" => _cid}) do
     shortcuts =
       DiwaAgent.Shortcuts.Registry.list_shortcuts()
@@ -1915,6 +1927,162 @@ defmodule DiwaAgent.Tools.Executor do
       new_meta = Map.put(m.metadata || %{}, "consumed", true)
       Memory.update_metadata(m.id, new_meta)
     end)
+  end
+
+  # --- New Handoff Transmission Tools ---
+
+  defp execute_reorder_queue_item(%{"context_id" => context_id, "item_ref" => ref,  "direction" => direction} = args) do
+    case fetch_handoff_queue_items(context_id) do
+      {:ok, []} ->
+        error_response("Queue is empty - no items to reorder.")
+
+      {:ok, items} ->
+        # Validate ref is in range
+        if ref < 1 or ref > length(items) do
+          error_response("Invalid item_ref #{ref}. Queue has #{length(items)} item(s).")
+        else
+          item = Enum.at(items, ref - 1)
+          
+          # Calculate new position based on direction
+          new_position = case direction do
+            "up" when ref > 1 -> ref - 1
+            "down" when ref < length(items) -> ref + 1
+            "top" -> 1
+            "bottom" -> length(items)
+            "to" -> Map.get(args, "target_position", ref)
+            _ -> ref  # Invalid direction or at boundary
+          end
+
+          # Update position in metadata
+          updated_meta = 
+            item.metadata 
+            |> Map.put("queue_position", new_position)
+            |> Map.put("last_reordered_at", DateTime.utc_now() |> DateTime.to_iso8601())
+
+          case Memory.update_metadata(item.id, updated_meta) do
+            {:ok, _} ->
+              success_response("✓ Moved item [#{ref}] to position #{new_position}")
+
+            {:error, reason} ->
+              error_response("Failed to reorder: #{inspect(reason)}")
+          end
+        end
+
+      _ ->
+        error_response("Failed to fetch queue items")
+    end
+  end
+
+  defp execute_transmit_handoff(%{"context_id" => context_id, "summary" => summary} = args) do
+    target_context_id = Map.get(args, "target_context_id")
+    channel = Map.get(args, "channel", "default")
+
+    # Compile the queue
+    case fetch_handoff_queue_items(context_id) do
+      {:ok, items} ->
+        # Create handoff memory
+        handoff_content = """
+        # Handoff Transmission
+
+        **Summary:** #{summary}
+        **Channel:** #{channel}
+        **Transmitted:** #{DateTime.utc_now() |> DateTime.to_iso8601()}
+        #{if target_context_id, do: "**Target Context:** #{target_context_id}", else: ""}
+
+        ## Queue Items (#{length(items)})
+        #{items |> Enum.map(&"- #{&1.content}") |> Enum.join("\n")}
+        """
+
+        handoff_metadata = %{
+          type: "handoff_transmission",
+          channel: channel,
+          source_context_id: context_id,
+          target_context_id: target_context_id,
+          item_count: length(items),
+          transmitted_at: DateTime.utc_now() |> DateTime.to_iso8601(),
+          status: "transmitted"
+        }
+
+        # Store handoff in source context
+        case Memory.add(context_id, handoff_content, %{
+               actor: "system",
+               tags: ["handoff", "transmitted", channel],
+               metadata: handoff_metadata
+             }) do
+          {:ok, handoff} ->
+            # Mark queue items as consumed
+            mark_handoff_queue_consumed(items)
+
+            success_response("""
+            ✓ Handoff transmitted successfully!
+            
+            Channel: #{channel}
+            Items included: #{length(items)}
+            Handoff ID: #{handoff.id}
+            #{if target_context_id, do: "Target: #{target_context_id}", else: "Available on channel for any context to receive"}
+            """)
+
+          {:error, reason} ->
+            error_response("Failed to transmit handoff: #{inspect(reason)}")
+        end
+
+      _ ->
+        error_response("Failed to compile queue for transmission")
+    end
+  end
+
+  defp execute_receive_handoff(%{"context_id" => context_id} = args) do
+    channel = Map.get(args, "channel", "default")
+    source_filter = Map.get(args, "source_context_id")
+
+    # Search for transmitted handoffs on the channel
+    # Since we don't have a global channel system yet, we'll search by tag
+    case Memory.list_by_tag(context_id, "transmitted") do
+      {:ok, []} ->
+        success_response("No handoffs available on channel '#{channel}'.")
+
+      {:ok, handoffs} ->
+        # Filter by channel and optionally by source
+        relevant_handoffs =
+          handoffs
+          |> Enum.filter(fn h ->
+            meta = h.metadata || %{}
+            meta["channel"] == channel and
+              (is_nil(source_filter) or meta["source_context_id"] == source_filter) and
+              meta["status"] == "transmitted"
+          end)
+
+        if relevant_handoffs == [] do
+          success_response("No matching handoffs found on channel '#{channel}'.")
+        else
+          # Take the most recent one
+          handoff = List.first(relevant_handoffs)
+          
+          # Update handoff status to received
+          updated_meta = 
+            handoff.metadata
+            |> Map.put("status", "received")
+            |> Map.put("received_at", DateTime.utc_now() |> DateTime.to_iso8601())
+            |> Map.put("received_by_context_id", context_id)
+
+          case Memory.update_metadata(handoff.id, updated_meta) do
+            {:ok, _} ->
+              success_response("""
+              ✓ Handoff received successfully!
+              
+              #{handoff.content}
+              
+              Use this information to continue from where the previous session left off.
+              """)
+
+            {:error, reason} ->
+              error_response("Failed to acknowledge handoff: #{inspect(reason)}")
+          end
+        end
+
+      _ ->
+        error_response("Failed to search for handoffs")
+    end
   end
 
   # --- Artifact Queue Management ---

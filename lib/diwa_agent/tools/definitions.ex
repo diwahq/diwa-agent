@@ -130,6 +130,9 @@ defmodule DiwaAgent.Tools.Definitions do
       determine_workflow(),
       queue_handoff_item(),
       list_handoff_queue(),
+      reorder_queue_item(),
+      transmit_handoff(),
+      receive_handoff(),
 
       # UGAT Onboarding
       confirm_binding()
@@ -1720,6 +1723,78 @@ defmodule DiwaAgent.Tools.Definitions do
         type: "object",
         properties: %{
           context_id: %{type: "string", description: "The UUID of the project context"}
+        },
+        required: ["context_id"]
+      }
+    }
+  end
+
+  defp reorder_queue_item do
+    %{
+      name: "reorder_queue_item",
+      description: "Move a queued handoff item to a different position (up/down/top/bottom).",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "The UUID of the project context"},
+          item_ref: %{type: "integer", description: "Reference number [1], [2], etc. from list"},
+          direction: %{
+            type: "string",
+            enum: ["up", "down", "top", "bottom", "to"],
+            description: "Direction to move: up (1 position), down (1 position), top (first), bottom (last), or to (specific position)"
+          },
+          target_position: %{
+            type: "integer",
+            description: "Target position when direction is 'to' (1-indexed)"
+          }
+        },
+        required: ["context_id", "item_ref", "direction"]
+      }
+    }
+  end
+
+  defp transmit_handoff do
+    %{
+      name: "transmit_handoff",
+      description: "Compile the handoff queue and transmit it to another context or channel for pickup.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "Source context ID"}, 
+          target_context_id: %{
+            type: "string",
+            description: "Optional target context ID to transmit to"
+          },
+          channel: %{
+            type: "string",
+            description: "Optional channel name (default: 'default')"
+          },
+          summary: %{
+            type: "string",
+            description: "Brief summary of the handoff"
+          }
+        },
+        required: ["context_id", "summary"]
+      }
+    }
+  end
+
+  defp receive_handoff do
+    %{
+      name: "receive_handoff",
+      description: "Receive and acknowledge a handoff from a channel or another context.",
+      inputSchema: %{
+        type: "object",
+        properties: %{
+          context_id: %{type: "string", description: "Receiving context ID"},
+          channel: %{
+            type: "string",
+            description: "Channel name to receive from (default: 'default')"
+          },
+          source_context_id: %{
+            type: "string",
+            description: "Optional filter: only receive from this context"
+          }
         },
         required: ["context_id"]
       }
