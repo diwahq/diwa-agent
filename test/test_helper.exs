@@ -21,7 +21,7 @@ defmodule DiwaAgent.TestHelper do
     case DiwaAgent.Repo.get_by(DiwaSchema.Enterprise.Organization, name: "Default") do
       nil ->
         %DiwaSchema.Enterprise.Organization{}
-        |> DiwaSchema.Enterprise.Organization.changeset(%{name: "Default"})
+        |> DiwaSchema.Enterprise.Organization.changeset(%{name: "Default", slug: "default"})
         |> DiwaAgent.Repo.insert!()
 
       org ->

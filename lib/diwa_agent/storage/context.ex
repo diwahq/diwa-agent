@@ -64,9 +64,16 @@ defmodule DiwaAgent.Storage.Context do
   """
   def get(nil), do: {:error, :not_found}
 
-  def get(id) do
+  def get(id, organization_id \\ nil) do
     with {:ok, uuid} <- cast_uuid(id) do
-      case Repo.get(Context, uuid) do
+      query = 
+        if organization_id do
+          from(c in Context, where: c.id == ^uuid and c.organization_id == ^organization_id)
+        else
+          from(c in Context, where: c.id == ^uuid)
+        end
+
+      case Repo.one(query) do
         nil -> {:error, :not_found}
         context -> {:ok, context}
       end

@@ -33,10 +33,10 @@ defmodule DiwaAgent.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       "ecto.migrate": [
-        "ecto.migrate --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
+        "ecto.migrate --migrations-path ../diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
       ],
       "ecto.rollback": [
-        "ecto.rollback --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
+        "ecto.rollback --migrations-path ../diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
       ],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
@@ -83,8 +83,7 @@ defmodule DiwaAgent.MixProject do
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
 
       # Shared Schema
-      {:diwa_schema,
-       git: "https://github.com/diwahq/diwa_schema.git", branch: "main", override: true}
+      {:diwa_schema, path: "../diwa_schema", override: true}
     ]
   end
 

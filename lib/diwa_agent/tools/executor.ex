@@ -29,8 +29,21 @@ defmodule DiwaAgent.Tools.Executor do
       params = Map.drop(args, ["buffer", "session_id"])
 
       case DiwaAgent.Tala.Buffer.push(session_id, context_id, tool_name, params, actor) do
+        {:ok, id, nil} ->
+          success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})")
+        
+        {:ok, id, warning} when is_binary(warning) ->
+          success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})\n\n⚠️ #{warning}")
+        
+        # Legacy format support (backward compatible)
         {:ok, id} ->
           success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})")
+
+        {:error, :buffer_full, msg} ->
+          error_response("❌ #{msg}")
+        
+        {:error, :payload_too_large, msg} ->
+          error_response("❌ #{msg}")
 
         {:error, reason} ->
           error_response("Failed to buffer operation: #{inspect(reason)}")
@@ -474,34 +487,49 @@ defmodule DiwaAgent.Tools.Executor do
 
   def execute("end_session", %{"session_id" => sid, "summary" => sum} = args) do
     next_steps = Map.get(args, "next_steps", [])
+    auto_commit = Map.get(args, "auto_commit", true)
 
-    # 1. Fetch items from Handoff Queue
-    queue_text =
-      case Repo.get(Session, sid) do
-        %Session{context_id: cid} ->
-          {:ok, items} = fetch_handoff_queue_items(cid)
-          format_queue_items(items)
-
-        _ ->
-          ""
-      end
-
-    full_summary = sum <> queue_text
-
-    case DiwaAgent.ContextBridge.LiveSync.end_session(sid, full_summary, next_steps) do
-      {:ok, session} ->
-        # 2. Mark queue items as consumed
-        if session do
-          {:ok, items} = fetch_handoff_queue_items(session.context_id)
-          mark_handoff_queue_consumed(items)
-        end
-
-        success_response("✓ Session ended and handoff note recorded.\n(Included #{String.length(queue_text)} bytes of queued updates)")
-
+    # TALA: Check for pending buffer operations before ending session
+    buffer_result = handle_buffer_on_end(sid, auto_commit)
+    
+    case buffer_result do
       {:error, reason} ->
-        error_response("Failed to end session: #{inspect(reason)}")
+        error_response("❌ Cannot end session: #{reason}")
+      
+      {:ok, buffer_action, buffer_count} ->
+        # 1. Fetch items from Handoff Queue
+        queue_text =
+          case Repo.get(Session, sid) do
+            %Session{context_id: cid} ->
+              {:ok, items} = fetch_handoff_queue_items(cid)
+              format_queue_items(items)
+
+            _ ->
+              ""
+          end
+
+        full_summary = sum <> queue_text
+
+        case DiwaAgent.ContextBridge.LiveSync.end_session(sid, full_summary, next_steps) do
+          {:ok, session} ->
+            # 2. Mark queue items as consumed
+            if session do
+              {:ok, items} = fetch_handoff_queue_items(session.context_id)
+              mark_handoff_queue_consumed(items)
+            end
+
+            # Build response with buffer action info
+            buffer_msg = format_buffer_action_message(buffer_action, buffer_count)
+            
+            success_response("✓ Session ended and handoff note recorded.\n#{buffer_msg}(Included #{String.length(queue_text)} bytes of queued updates)")
+
+          {:error, reason} ->
+            error_response("Failed to end session: #{inspect(reason)}")
+        end
     end
   end
+
+
 
   def execute("prune_expired_memories", _args) do
     case DiwaAgent.ContextBridge.MemoryLifecycle.prune_expired() do
@@ -1628,8 +1656,61 @@ defmodule DiwaAgent.Tools.Executor do
   end
 
   def execute(tool_name, _args) do
-    error_response("Unknown tool: #{tool_name}")
+    success_response("Unimplemented tool: #{tool_name}")
   end
+
+  # TALA: Helper functions
+  defp handle_buffer_on_end(session_id, auto_commit) do
+    ops = DiwaAgent.Tala.Buffer.list(session_id)
+    count = length(ops)
+
+    cond do
+      count == 0 ->
+        {:ok, :none, 0}
+      
+      auto_commit == true ->
+        # Auto-commit buffer before ending
+        case DiwaAgent.Tala.Buffer.flush(session_id) do
+          {:ok, ^count} ->
+            # Execute all operations (same logic as commit_buffer)
+            results =
+              Enum.reduce_while(ops, {:ok, []}, fn op, {:ok, acc} ->
+                res = execute(op.tool_name, op.params)
+                if res["isError"] do
+                  {:halt, {:error, "Failed to execute #{op.tool_name}: #{inspect(res["content"])}"}}
+                else
+                  {:cont, {:ok, acc ++ [res]}}
+                end
+              end)
+
+            case results do
+              {:ok, _list} ->
+                # Mark as committed in DB
+                import Ecto.Query
+                DiwaAgent.Tala.Operation
+                |> where(session_id: ^session_id, status: "pending")
+                |> DiwaAgent.Repo.update_all(set: [status: "committed"])
+                
+                {:ok, :committed, count}
+              
+              {:error, reason} ->
+                {:error, "#{count} buffered operations failed to commit. Error: #{reason}. Please run `/commit` manually or `/discard` to abandon."}
+            end
+
+          {:error, reason} ->
+            {:error, "Buffer flush failed: #{inspect(reason)}"}
+        end
+      
+      auto_commit == false ->
+        # Discard buffer
+        :ok = DiwaAgent.Tala.Buffer.discard(session_id)
+        {:ok, :discarded, count}
+    end
+  end
+
+  defp format_buffer_action_message(:none, _count), do: ""
+  defp format_buffer_action_message(:committed, count), do: "✓ Auto-committed #{count} buffered operations.\n"
+  defp format_buffer_action_message(:discarded, count), do: "⚠️ Discarded #{count} uncommitted operations (auto_commit=false).\n"
 
 
   defp build_tree(id, indent) do
