@@ -57,7 +57,7 @@ defmodule DiwaAgent.Tools.Ugat.LinkingTest do
       assert Enum.at(response["content"], 0)["text"] =~ "Contexts Linked"
 
       # Verify link exists
-      links = DiwaAgent.Storage.Context.Ugat.get_relationships(c1.id, :outgoing)
+      links = DiwaAgent.Storage.Context.Ugat.get_relationships(nil, c1.id, :outgoing)
       assert length(links) == 1
     end
 

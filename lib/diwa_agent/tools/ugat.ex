@@ -120,7 +120,7 @@ defmodule DiwaAgent.Tools.Ugat do
         _ -> :outgoing
       end
 
-    links = Ugat.get_relationships(cid, direction)
+    links = Ugat.get_relationships(nil, cid, direction)
 
     if links == [] do
       success_response("No related contexts found (#{direction}).")

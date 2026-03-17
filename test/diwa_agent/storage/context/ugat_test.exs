@@ -89,24 +89,24 @@ defmodule DiwaAgent.Storage.Context.UgatTest do
       {:ok, _} = Ugat.link_contexts(a.id, b.id, "depends_on")
 
       # Outgoing from A
-      outgoing = Ugat.get_relationships(a.id, :outgoing)
+      outgoing = Ugat.get_relationships(nil, a.id, :outgoing)
       assert length(outgoing) == 1
       assert hd(outgoing).target_context_id == b.id
 
       # Incoming to B
-      incoming = Ugat.get_relationships(b.id, :incoming)
+      incoming = Ugat.get_relationships(nil, b.id, :incoming)
       assert length(incoming) == 1
       assert hd(incoming).source_context_id == a.id
 
       # Both
-      both_a = Ugat.get_relationships(a.id, :both)
+      both_a = Ugat.get_relationships(nil, a.id, :both)
       assert length(both_a) == 1
     end
 
     test "unlink_contexts/1", %{a: a, b: b} do
       {:ok, rel} = Ugat.link_contexts(a.id, b.id, "depends_on")
       assert {:ok, _} = Ugat.unlink_contexts(rel.id)
-      assert [] == Ugat.get_relationships(a.id, :outgoing)
+      assert [] == Ugat.get_relationships(nil, a.id, :outgoing)
     end
   end
 

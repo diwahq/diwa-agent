@@ -8,6 +8,7 @@ defmodule DiwaAgent.Storage.Context.Ugat do
   alias DiwaSchema.Core.ContextBinding
   alias DiwaSchema.Core.ContextRelationship
   import Ecto.Query
+  require Logger
 
   # --- Context Bindings (Auto-Detection) ---
 
@@ -176,7 +177,13 @@ defmodule DiwaAgent.Storage.Context.Ugat do
     end
   end
 
-  def get_relationships(context_id, direction \\ :outgoing) do
+  def get_relationships(context_id, direction) when is_atom(direction) do
+    get_relationships(nil, context_id, direction)
+  end
+
+  def get_relationships(organization_id, context_id, direction \\ :both) do
+    IO.inspect({organization_id, context_id, direction}, label: "DEBUG get_relationships args")
+    Logger.debug("[Ugat] get_relationships: org=#{organization_id}, ctx=#{context_id}, dir=#{direction}")
     query =
       case direction do
         :outgoing ->
@@ -196,6 +203,18 @@ defmodule DiwaAgent.Storage.Context.Ugat do
             where: r.source_context_id == ^context_id or r.target_context_id == ^context_id,
             preload: [:source_context, :target_context]
           )
+      end
+
+
+    query =
+      if is_nil(organization_id) do
+        query
+      else
+        from(r in query,
+          join: c in DiwaSchema.Core.Context,
+          on: c.id == r.source_context_id,
+          where: c.organization_id == ^organization_id
+        )
       end
 
     Repo.all(query)
@@ -284,7 +303,7 @@ defmodule DiwaAgent.Storage.Context.Ugat do
   defp traverse(current_ids, depth, state) do
     {next_ids, new_state} =
       Enum.reduce(current_ids, {[], state}, fn id, {acc_next, acc_state} ->
-        relationships = get_relationships(id, :both)
+        relationships = get_relationships(nil, id, :both)
 
         Enum.reduce(relationships, {acc_next, acc_state}, fn rel, {curr_next_ids, curr_state} ->
           # Determine neighbor
@@ -466,7 +485,7 @@ defmodule DiwaAgent.Storage.Context.Ugat do
         # 2. Search neighbors by name (fuzzy match)
         # We search immediate neighbors (outgoing or incoming)
         neighbor_contexts =
-          get_relationships(current_id, :both)
+          get_relationships(nil, current_id, :both)
           |> Enum.map(fn r ->
             if r.source_context_id == current_id, do: r.target_context, else: r.source_context
           end)
@@ -480,7 +499,7 @@ defmodule DiwaAgent.Storage.Context.Ugat do
   end
 
   defp list_neighbors(context_id) do
-    rels = get_relationships(context_id, :both)
+    rels = get_relationships(nil, context_id, :both)
 
     Enum.map(rels, fn r ->
       {direction, neighbor, type} =
