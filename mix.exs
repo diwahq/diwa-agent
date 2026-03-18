@@ -30,15 +30,15 @@ defmodule DiwaAgent.MixProject do
 
   defp aliases do
     [
-      "ecto.setup": ["ecto.create", "ecto.migrate"],
+      "ecto.setup": ["ecto.create", "ecto.migrate_all"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "ecto.migrate": [
+      "ecto.migrate_all": [
         "ecto.migrate --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
       ],
-      "ecto.rollback": [
+      "ecto.rollback_all": [
         "ecto.rollback --migrations-path deps/diwa_schema/priv/repo/migrations --migrations-path priv/repo/migrations"
       ],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      test: ["ecto.create --quiet", "ecto.migrate_all --quiet", "test"]
     ]
   end
 

@@ -50,7 +50,7 @@ jobs:
       run: mix compile --warnings-as-errors
     
     - name: Run migrations
-      run: mix ecto.create && mix ecto.migrate
+      run: mix ecto.create && mix ecto.migrate_all
     
     - name: Run tests
       run: mix test
