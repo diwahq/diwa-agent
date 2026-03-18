@@ -27,7 +27,8 @@ config :diwa_agent, DiwaAgent.Repo,
   adapter: Ecto.Adapters.SQLite3,
   migration_primary_key: [name: :id, type: :binary_id],
   database: "priv/diwa_agent.db",
-  pool_size: 5
+  pool_size: 5,
+  migrations_path: ["priv/repo/migrations"]
 
 config :logger,
   level: :warning,
