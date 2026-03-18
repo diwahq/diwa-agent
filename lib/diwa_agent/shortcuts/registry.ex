@@ -122,18 +122,18 @@ defmodule DiwaAgent.Shortcuts.Registry do
       {"note", %{tool: "queue_handoff_item", schema: [:message]}},
       {"notes", %{tool: "list_handoff_queue", schema: []}},
       {"queue", %{tool: "list_handoff_queue", schema: []}},
-      
+
       # Handoff Queue Management (@nxmv)
       {"nxmv", %{tool: "reorder_queue_item", schema: [:item_ref, :direction, :target_position]}},
-      {"nxmove", %{tool: "reorder_queue_item", schema: [:item_ref, :direction, :target_position]}},
-      
+      {"nxmove",
+       %{tool: "reorder_queue_item", schema: [:item_ref, :direction, :target_position]}},
+
       # Handoff Transmission (@tx/@rx)
       {"tx", %{tool: "transmit_handoff", schema: [:summary, :target_context_id, :channel]}},
       {"transmit", %{tool: "transmit_handoff", schema: [:summary, :target_context_id, :channel]}},
       {"send", %{tool: "transmit_handoff", schema: [:summary, :target_context_id, :channel]}},
       {"rx", %{tool: "receive_handoff", schema: [:channel, :source_context_id]}},
       {"receive", %{tool: "receive_handoff", schema: [:channel, :source_context_id]}},
-      
       {"pick", %{tool: "claim_work_item", schema: [:title]}},
       {"commit", %{tool: "create_checkpoint", schema: [:message]}},
       {"push", %{tool: "complete_work", schema: [:summary]}},

@@ -28,15 +28,19 @@ defmodule DiwaAgent.Registry.Agent do
         }
 
   def new(attrs) do
+    attrs = if is_map(attrs), do: Enum.to_list(attrs), else: attrs
+
     # Ensure capabilities is a list of strings
     caps =
       Keyword.get(attrs, :capabilities, [])
       |> List.wrap()
       |> Enum.map(&to_string/1)
 
+    name = Keyword.get(attrs, :name) || "Unknown Agent"
+    role = Keyword.get(attrs, :role) || :general
     id = Keyword.get(attrs, :id) || UUID.uuid4()
 
-    struct(__MODULE__, Keyword.put(attrs, :id, id))
+    struct(__MODULE__, Keyword.merge(attrs, id: id, name: name, role: role))
     |> Map.put(:last_heartbeat, DateTime.utc_now())
     |> Map.put(:status, :idle)
     |> Map.put(:capabilities, caps)

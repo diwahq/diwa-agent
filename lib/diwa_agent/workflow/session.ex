@@ -41,8 +41,8 @@ defmodule DiwaAgent.Workflow.Session do
           check_recent_sessions(contexts, args)
 
         _ ->
-           # Fallback for unexpected results
-           {:error, :context_query_failed, "Unknown error listing contexts"}
+          # Fallback for unexpected results
+          {:error, :context_query_failed, "Unknown error listing contexts"}
       end
     end
   end

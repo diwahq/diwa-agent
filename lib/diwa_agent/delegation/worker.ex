@@ -16,7 +16,8 @@ defmodule DiwaAgent.Delegation.Worker do
   alias DiwaAgent.Delegation.{Broker, Handoff}
   alias DiwaAgent.Registry
 
-  @poll_interval_ms 5_000  # Poll every 5 seconds
+  # Poll every 5 seconds
+  @poll_interval_ms 5_000
 
   # Client API
 
@@ -76,9 +77,10 @@ defmodule DiwaAgent.Delegation.Worker do
       |> Enum.map(&poll_agent/1)
       |> Enum.sum()
 
-    %{state |
-      last_poll: DateTime.utc_now(),
-      tasks_executed: state.tasks_executed + executed_count
+    %{
+      state
+      | last_poll: DateTime.utc_now(),
+        tasks_executed: state.tasks_executed + executed_count
     }
   end
 
@@ -132,12 +134,18 @@ defmodule DiwaAgent.Delegation.Worker do
         other ->
           # Fallback for unexpected return values
           Broker.complete(handoff_id, "Unexpected result: #{inspect(other)}", :failed)
-          Logger.error("[Delegation.Worker] Task #{handoff_id} returned unexpected result: #{inspect(other)}")
+
+          Logger.error(
+            "[Delegation.Worker] Task #{handoff_id} returned unexpected result: #{inspect(other)}"
+          )
+
           :error
       end
     end
   end
 
+  @spec execute_task_by_role(Registry.Server.agent(), Handoff.t()) ::
+          {:ok, String.t()} | {:error, any()}
   defp execute_task_by_role(agent, handoff) do
     # For now, we'll implement a simple execution strategy
     # based on the agent's role
@@ -199,6 +207,11 @@ defmodule DiwaAgent.Delegation.Worker do
 
     Logger.info("[Generic Agent] Task: #{task_def}")
 
-    {:ok, "Generic task executed: #{String.slice(task_def, 0, 50)}..."}
+    # For testing typing, occasionally return error if task is "fail"
+    if task_def == "fail" do
+      {:error, "Generic task failure requested"}
+    else
+      {:ok, "Generic task executed: #{String.slice(task_def, 0, 50)}..."}
+    end
   end
 end

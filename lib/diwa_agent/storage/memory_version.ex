@@ -10,11 +10,12 @@ defmodule DiwaAgent.Storage.MemoryVersion do
   Record a new version of a memory.
   """
   def record(memory, operation, opts \\ %{}) do
-    version_number = 
-      (from(v in MemoryVersion, 
-        where: v.memory_id == ^memory.id, 
-        select: coalesce(max(v.version_number), 0) + 1) 
-      |> Repo.one())
+    version_number =
+      from(v in MemoryVersion,
+        where: v.memory_id == ^memory.id,
+        select: coalesce(max(v.version_number), 0) + 1
+      )
+      |> Repo.one()
 
     attrs = %{
       memory_id: memory.id,

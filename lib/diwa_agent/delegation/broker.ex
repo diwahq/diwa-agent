@@ -35,6 +35,13 @@ defmodule DiwaAgent.Delegation.Broker do
     GenServer.call(__MODULE__, {:complete, handoff_id, result_summary, status})
   end
 
+  @doc """
+  Clears the broker state (primarily for testing).
+  """
+  def clear do
+    GenServer.call(__MODULE__, :clear)
+  end
+
   # Server Callbacks
 
   @impl true
@@ -104,6 +111,12 @@ defmodule DiwaAgent.Delegation.Broker do
         # But here we are in memory.
         # Let's wrap the return: `{:ok, [{ref, task}]}`
     end
+  end
+
+  @impl true
+  def handle_call(:clear, _from, _state) do
+    Logger.info("[Broker] State cleared.")
+    {:reply, :ok, %{queues: %{}, pending: %{}}}
   end
 
   @impl true

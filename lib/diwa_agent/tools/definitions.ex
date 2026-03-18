@@ -1741,7 +1741,8 @@ defmodule DiwaAgent.Tools.Definitions do
           direction: %{
             type: "string",
             enum: ["up", "down", "top", "bottom", "to"],
-            description: "Direction to move: up (1 position), down (1 position), top (first), bottom (last), or to (specific position)"
+            description:
+              "Direction to move: up (1 position), down (1 position), top (first), bottom (last), or to (specific position)"
           },
           target_position: %{
             type: "integer",
@@ -1756,11 +1757,12 @@ defmodule DiwaAgent.Tools.Definitions do
   defp transmit_handoff do
     %{
       name: "transmit_handoff",
-      description: "Compile the handoff queue and transmit it to another context or channel for pickup.",
+      description:
+        "Compile the handoff queue and transmit it to another context or channel for pickup.",
       inputSchema: %{
         type: "object",
         properties: %{
-          context_id: %{type: "string", description: "Source context ID"}, 
+          context_id: %{type: "string", description: "Source context ID"},
           target_context_id: %{
             type: "string",
             description: "Optional target context ID to transmit to"

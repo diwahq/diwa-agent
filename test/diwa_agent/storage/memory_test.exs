@@ -65,7 +65,7 @@ defmodule DiwaAgent.Storage.MemoryTest do
       {:ok, _memory} = Memory.add(context.id, "New memory", nil)
 
       {:ok, updated_context} = Context.get(context.id)
-      assert updated_context.updated_at > original_updated_at
+      assert DateTime.compare(updated_context.updated_at, original_updated_at) == :gt
     end
   end
 
@@ -166,7 +166,7 @@ defmodule DiwaAgent.Storage.MemoryTest do
 
       assert {:ok, updated} = Memory.update(memory.id, "New content")
       assert updated.content == "New content"
-      assert updated.updated_at > original_updated_at
+      assert DateTime.compare(updated.updated_at, original_updated_at) == :gt
     end
 
     test "preserves inserted_at timestamp", %{context: context} do
@@ -205,7 +205,7 @@ defmodule DiwaAgent.Storage.MemoryTest do
       {:ok, _} = Memory.update(memory.id, "Updated")
 
       {:ok, context_after} = Context.get(context.id)
-      assert context_after.updated_at > context_before.updated_at
+      assert DateTime.compare(context_after.updated_at, context_before.updated_at) == :gt
     end
   end
 

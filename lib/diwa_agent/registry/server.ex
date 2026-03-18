@@ -62,6 +62,20 @@ defmodule DiwaAgent.Registry.Server do
     GenServer.call(__MODULE__, {:find_by_caps, List.wrap(required_caps)})
   end
 
+  @doc """
+  Unregisters an agent by ID.
+  """
+  def unregister(agent_id) do
+    GenServer.call(__MODULE__, {:unregister, agent_id})
+  end
+
+  @doc """
+  Clears all registered agents (primarily for testing).
+  """
+  def clear do
+    GenServer.call(__MODULE__, :clear)
+  end
+
   # Server Callbacks
 
   @impl true
@@ -134,6 +148,19 @@ defmodule DiwaAgent.Registry.Server do
       end)
 
     {:reply, matches, state}
+  end
+
+  @impl true
+  def handle_call({:unregister, agent_id}, _from, state) do
+    new_state = Map.delete(state, agent_id)
+    Logger.info("[DiwaAgent.Registry] Agent unregistered: #{agent_id}")
+    {:reply, :ok, new_state}
+  end
+
+  @impl true
+  def handle_call(:clear, _from, _state) do
+    Logger.info("[DiwaAgent.Registry] All agents cleared.")
+    {:reply, :ok, %{}}
   end
 
   @impl true

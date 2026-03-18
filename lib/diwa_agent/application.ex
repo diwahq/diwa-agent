@@ -19,7 +19,7 @@ defmodule DiwaAgent.Application do
 
         # Task Supervisor for async tasks
         {Task.Supervisor, name: DiwaAgent.TaskSupervisor},
-        
+
         # Session Registry for SessionProcess tracking
         {Registry, keys: :unique, name: DiwaAgent.SessionRegistry},
 
@@ -34,7 +34,7 @@ defmodule DiwaAgent.Application do
 
         # TALA Buffer (Transactional Accumulation & Lazy Apply)
         DiwaAgent.Tala.Buffer,
-        
+
         # TALA Cleanup Worker (Orphan buffer cleanup)
         DiwaAgent.Tala.CleanupWorker,
 

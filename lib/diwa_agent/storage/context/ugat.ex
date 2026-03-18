@@ -183,7 +183,11 @@ defmodule DiwaAgent.Storage.Context.Ugat do
 
   def get_relationships(organization_id, context_id, direction \\ :both) do
     IO.inspect({organization_id, context_id, direction}, label: "DEBUG get_relationships args")
-    Logger.debug("[Ugat] get_relationships: org=#{organization_id}, ctx=#{context_id}, dir=#{direction}")
+
+    Logger.debug(
+      "[Ugat] get_relationships: org=#{organization_id}, ctx=#{context_id}, dir=#{direction}"
+    )
+
     query =
       case direction do
         :outgoing ->
@@ -204,7 +208,6 @@ defmodule DiwaAgent.Storage.Context.Ugat do
             preload: [:source_context, :target_context]
           )
       end
-
 
     query =
       if is_nil(organization_id) do

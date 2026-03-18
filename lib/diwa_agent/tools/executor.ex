@@ -31,17 +31,19 @@ defmodule DiwaAgent.Tools.Executor do
       case DiwaAgent.Tala.Buffer.push(session_id, context_id, tool_name, params, actor) do
         {:ok, id, nil} ->
           success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})")
-        
+
         {:ok, id, warning} when is_binary(warning) ->
-          success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})\n\n⚠️ #{warning}")
-        
+          success_response(
+            "✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})\n\n⚠️ #{warning}"
+          )
+
         # Legacy format support (backward compatible)
         {:ok, id} ->
           success_response("✓ Operation '#{tool_name}' buffered in TALA. (ID: #{id})")
 
         {:error, :buffer_full, msg} ->
           error_response("❌ #{msg}")
-        
+
         {:error, :payload_too_large, msg} ->
           error_response("❌ #{msg}")
 
@@ -491,11 +493,11 @@ defmodule DiwaAgent.Tools.Executor do
 
     # TALA: Check for pending buffer operations before ending session
     buffer_result = handle_buffer_on_end(sid, auto_commit)
-    
+
     case buffer_result do
       {:error, reason} ->
         error_response("❌ Cannot end session: #{reason}")
-      
+
       {:ok, buffer_action, buffer_count} ->
         # 1. Fetch items from Handoff Queue
         queue_text =
@@ -520,16 +522,16 @@ defmodule DiwaAgent.Tools.Executor do
 
             # Build response with buffer action info
             buffer_msg = format_buffer_action_message(buffer_action, buffer_count)
-            
-            success_response("✓ Session ended and handoff note recorded.\n#{buffer_msg}(Included #{String.length(queue_text)} bytes of queued updates)")
+
+            success_response(
+              "✓ Session ended and handoff note recorded.\n#{buffer_msg}(Included #{String.length(queue_text)} bytes of queued updates)"
+            )
 
           {:error, reason} ->
             error_response("Failed to end session: #{inspect(reason)}")
         end
     end
   end
-
-
 
   def execute("prune_expired_memories", _args) do
     case DiwaAgent.ContextBridge.MemoryLifecycle.prune_expired() do
@@ -615,10 +617,6 @@ defmodule DiwaAgent.Tools.Executor do
         error_response("Error updating memory: #{inspect(reason)}")
     end
   end
-
-
-
-
 
   def execute("delete_memory", %{"memory_id" => memory_id}) do
     # Fetch first to get context_id for CVC
@@ -718,10 +716,6 @@ defmodule DiwaAgent.Tools.Executor do
         end
     end
   end
-
-
-
-
 
   def execute("search_memories", %{"query" => query} = args) do
     context_id = Map.get(args, "context_id")
@@ -1472,10 +1466,6 @@ defmodule DiwaAgent.Tools.Executor do
   # --- Agent Coordination Logic (Phase 1.4) ---
   # REMOVED: Agent Coordination tools (register_agent, match_experts, delegate_task, etc.) are Enterprise only.
 
-
-
-
-
   # --- Shortcut Interpreter Tools (Phase 4) ---
 
   def execute("execute_shortcut", %{"command" => command, "context_id" => context_id}) do
@@ -1656,7 +1646,7 @@ defmodule DiwaAgent.Tools.Executor do
   end
 
   def execute(tool_name, _args) do
-    success_response("Unimplemented tool: #{tool_name}")
+    error_response("Unknown tool: #{tool_name}")
   end
 
   # TALA: Helper functions
@@ -1667,7 +1657,7 @@ defmodule DiwaAgent.Tools.Executor do
     cond do
       count == 0 ->
         {:ok, :none, 0}
-      
+
       auto_commit == true ->
         # Auto-commit buffer before ending
         case DiwaAgent.Tala.Buffer.flush(session_id) do
@@ -1676,8 +1666,10 @@ defmodule DiwaAgent.Tools.Executor do
             results =
               Enum.reduce_while(ops, {:ok, []}, fn op, {:ok, acc} ->
                 res = execute(op.tool_name, op.params)
+
                 if res["isError"] do
-                  {:halt, {:error, "Failed to execute #{op.tool_name}: #{inspect(res["content"])}"}}
+                  {:halt,
+                   {:error, "Failed to execute #{op.tool_name}: #{inspect(res["content"])}"}}
                 else
                   {:cont, {:ok, acc ++ [res]}}
                 end
@@ -1687,20 +1679,22 @@ defmodule DiwaAgent.Tools.Executor do
               {:ok, _list} ->
                 # Mark as committed in DB
                 import Ecto.Query
+
                 DiwaAgent.Tala.Operation
                 |> where(session_id: ^session_id, status: "pending")
                 |> DiwaAgent.Repo.update_all(set: [status: "committed"])
-                
+
                 {:ok, :committed, count}
-              
+
               {:error, reason} ->
-                {:error, "#{count} buffered operations failed to commit. Error: #{reason}. Please run `/commit` manually or `/discard` to abandon."}
+                {:error,
+                 "#{count} buffered operations failed to commit. Error: #{reason}. Please run `/commit` manually or `/discard` to abandon."}
             end
 
           {:error, reason} ->
             {:error, "Buffer flush failed: #{inspect(reason)}"}
         end
-      
+
       auto_commit == false ->
         # Discard buffer
         :ok = DiwaAgent.Tala.Buffer.discard(session_id)
@@ -1709,9 +1703,12 @@ defmodule DiwaAgent.Tools.Executor do
   end
 
   defp format_buffer_action_message(:none, _count), do: ""
-  defp format_buffer_action_message(:committed, count), do: "✓ Auto-committed #{count} buffered operations.\n"
-  defp format_buffer_action_message(:discarded, count), do: "⚠️ Discarded #{count} uncommitted operations (auto_commit=false).\n"
 
+  defp format_buffer_action_message(:committed, count),
+    do: "✓ Auto-committed #{count} buffered operations.\n"
+
+  defp format_buffer_action_message(:discarded, count),
+    do: "⚠️ Discarded #{count} uncommitted operations (auto_commit=false).\n"
 
   defp build_tree(id, indent) do
     case Memory.get(id) do
@@ -2012,7 +2009,9 @@ defmodule DiwaAgent.Tools.Executor do
 
   # --- New Handoff Transmission Tools ---
 
-  defp execute_reorder_queue_item(%{"context_id" => context_id, "item_ref" => ref,  "direction" => direction} = args) do
+  defp execute_reorder_queue_item(
+         %{"context_id" => context_id, "item_ref" => ref, "direction" => direction} = args
+       ) do
     case fetch_handoff_queue_items(context_id) do
       {:ok, []} ->
         error_response("Queue is empty - no items to reorder.")
@@ -2023,20 +2022,22 @@ defmodule DiwaAgent.Tools.Executor do
           error_response("Invalid item_ref #{ref}. Queue has #{length(items)} item(s).")
         else
           item = Enum.at(items, ref - 1)
-          
+
           # Calculate new position based on direction
-          new_position = case direction do
-            "up" when ref > 1 -> ref - 1
-            "down" when ref < length(items) -> ref + 1
-            "top" -> 1
-            "bottom" -> length(items)
-            "to" -> Map.get(args, "target_position", ref)
-            _ -> ref  # Invalid direction or at boundary
-          end
+          new_position =
+            case direction do
+              "up" when ref > 1 -> ref - 1
+              "down" when ref < length(items) -> ref + 1
+              "top" -> 1
+              "bottom" -> length(items)
+              "to" -> Map.get(args, "target_position", ref)
+              # Invalid direction or at boundary
+              _ -> ref
+            end
 
           # Update position in metadata
-          updated_meta = 
-            item.metadata 
+          updated_meta =
+            item.metadata
             |> Map.put("queue_position", new_position)
             |> Map.put("last_reordered_at", DateTime.utc_now() |> DateTime.to_iso8601())
 
@@ -2096,7 +2097,7 @@ defmodule DiwaAgent.Tools.Executor do
 
             success_response("""
             ✓ Handoff transmitted successfully!
-            
+
             Channel: #{channel}
             Items included: #{length(items)}
             Handoff ID: #{handoff.id}
@@ -2128,6 +2129,7 @@ defmodule DiwaAgent.Tools.Executor do
           handoffs
           |> Enum.filter(fn h ->
             meta = h.metadata || %{}
+
             meta["channel"] == channel and
               (is_nil(source_filter) or meta["source_context_id"] == source_filter) and
               meta["status"] == "transmitted"
@@ -2138,9 +2140,9 @@ defmodule DiwaAgent.Tools.Executor do
         else
           # Take the most recent one
           handoff = List.first(relevant_handoffs)
-          
+
           # Update handoff status to received
-          updated_meta = 
+          updated_meta =
             handoff.metadata
             |> Map.put("status", "received")
             |> Map.put("received_at", DateTime.utc_now() |> DateTime.to_iso8601())
@@ -2150,9 +2152,9 @@ defmodule DiwaAgent.Tools.Executor do
             {:ok, _} ->
               success_response("""
               ✓ Handoff received successfully!
-              
+
               #{handoff.content}
-              
+
               Use this information to continue from where the previous session left off.
               """)
 

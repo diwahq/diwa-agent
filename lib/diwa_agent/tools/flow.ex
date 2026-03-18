@@ -193,7 +193,8 @@ defmodule DiwaAgent.Tools.Flow do
       test_failures: count_by_tag(recent, "test_failure"),
       pending_handoff: tags_exist?(recent, "handoff_to_coder"),
       pending_tasks: count_by_tag(recent, "requirement"),
-      handoff_queue_size: count_handoff_queue(context_id), # New check
+      # New check
+      handoff_queue_size: count_handoff_queue(context_id),
       recent_files: extract_recent_files(recent)
     }
   end
@@ -202,7 +203,9 @@ defmodule DiwaAgent.Tools.Flow do
     case Memory.list_by_tag(context_id, "handoff_item") do
       {:ok, items} ->
         Enum.count(items, fn m -> !Map.get(m.metadata || %{}, "consumed", false) end)
-      _ -> 0
+
+      _ ->
+        0
     end
   end
 

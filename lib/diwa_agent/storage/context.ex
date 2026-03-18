@@ -66,7 +66,7 @@ defmodule DiwaAgent.Storage.Context do
 
   def get(id, organization_id \\ nil) do
     with {:ok, uuid} <- cast_uuid(id) do
-      query = 
+      query =
         if organization_id do
           from(c in Context, where: c.id == ^uuid and c.organization_id == ^organization_id)
         else
@@ -201,12 +201,17 @@ defmodule DiwaAgent.Storage.Context do
     # For now, ensure a default organization exists and return its ID
     case Repo.one(from(o in Organization, where: o.name == "Default", select: o.id)) do
       nil ->
-        {:ok, org} =
-          %Organization{}
-          |> Organization.changeset(%{name: "Default"})
-          |> Repo.insert()
+        %Organization{}
+        |> Organization.changeset(%{name: "Default", slug: "default"})
+        |> Repo.insert()
+        |> case do
+          {:ok, org} ->
+            org.id
 
-        org.id
+          {:error, _} ->
+            # Likely created by another process/test or already exists with different slug
+            Repo.one(from(o in Organization, where: o.name == "Default", select: o.id))
+        end
 
       id ->
         id

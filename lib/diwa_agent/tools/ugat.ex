@@ -574,7 +574,6 @@ defmodule DiwaAgent.Tools.Ugat do
     end
   end
 
-
   defp execute_confirm_binding(args) do
     action = Map.get(args, "action")
     binding_type = Map.get(args, "binding_type", "git_remote")

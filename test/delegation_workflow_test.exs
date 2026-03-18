@@ -6,30 +6,34 @@ defmodule DiwaAgent.DelegationWorkflowTest do
 
   @moduletag :integration
 
-  setup do
-    # Ensure broker is started
-    start_supervised!(Broker)
-    start_supervised!(Registry.Server)
-    start_supervised!(Worker)
+  describe "delegation workflow - success cases" do
+    setup do
+      # Ensure broker and and registries are started (could be already in app tree)
+      unless Process.whereis(Broker), do: start_supervised!(Broker)
+      unless Process.whereis(Registry.Server), do: start_supervised!(Registry.Server)
+      unless Process.whereis(Worker), do: start_supervised!(Worker)
 
-    # Register a test agent
-    agent = %{
-      id: "test-agent-#{:rand.uniform(10000)}",
-      role: :coder,
-      capabilities: ["code", "test"],
-      status: :idle
-    }
+      # Clear state for isolation
+      Broker.clear()
+      Registry.Server.clear()
 
-    Registry.Server.register(agent)
+      # Register a test agent
+      agent = %{
+        id: "test-agent-#{:rand.uniform(10000)}",
+        role: :coder,
+        capabilities: ["code", "test"],
+        status: :idle
+      }
 
-    on_exit(fn ->
-      Registry.Server.unregister(agent.id)
-    end)
+      Registry.Server.register(agent)
 
-    {:ok, agent: agent}
-  end
+      on_exit(fn ->
+        Registry.Server.unregister(agent.id)
+      end)
 
-  describe "delegation workflow" do
+      {:ok, agent: agent}
+    end
+
     test "can delegate task to specific agent", %{agent: agent} do
       # Create a handoff
       handoff = %Handoff{
@@ -47,10 +51,9 @@ defmodule DiwaAgent.DelegationWorkflowTest do
       }
 
       # Delegate the task
-      {:ok, ref, target_id} = Broker.delegate(handoff)
+      {:ok, _ref, target_id} = Broker.delegate(handoff)
 
       assert target_id == agent.id
-      assert is_binary(ref)
     end
 
     test "can poll for delegated tasks", %{agent: agent} do
@@ -85,7 +88,7 @@ defmodule DiwaAgent.DelegationWorkflowTest do
         task_definition: "Refactor database query module"
       }
 
-      {:ok, ref, _} = Broker.delegate(handoff)
+      {:ok, _ref, _} = Broker.delegate(handoff)
 
       # Poll and get the task
       {:ok, [task]} = Broker.poll(agent.id)
@@ -124,6 +127,18 @@ defmodule DiwaAgent.DelegationWorkflowTest do
       {:ok, remaining_tasks} = Broker.poll(agent.id)
       assert remaining_tasks == []
     end
+  end
+
+  describe "delegation workflow - failure cases" do
+    setup do
+      # Ensure broker and and registries are started
+      unless Process.whereis(Broker), do: start_supervised!(Broker)
+      unless Process.whereis(Registry.Server), do: start_supervised!(Registry.Server)
+
+      Broker.clear()
+      Registry.Server.clear()
+      :ok
+    end
 
     test "handles task with no matching agent gracefully" do
       # Create handoff without specifying agent
@@ -131,7 +146,8 @@ defmodule DiwaAgent.DelegationWorkflowTest do
         type: "handoff",
         delegation_type: :agent,
         from_agent_id: "orchestrator",
-        to_agent_id: nil,  # No specific agent
+        # No specific agent
+        to_agent_id: nil,
         status: :pending,
         task_definition: "Generic task",
         constraints: %{

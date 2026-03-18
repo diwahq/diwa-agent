@@ -9,7 +9,8 @@ defmodule DiwaAgent.Tala.Buffer do
 
   @max_ops Application.compile_env(:diwa_agent, [:tala, :max_buffer_ops], 500)
   @max_payload Application.compile_env(:diwa_agent, [:tala, :max_op_payload_bytes], 65_536)
-  @warning_threshold 0.8  # Warn at 80% capacity
+  # Warn at 80% capacity
+  @warning_threshold 0.8
 
   # Client API
 
@@ -59,7 +60,7 @@ defmodule DiwaAgent.Tala.Buffer do
     # TALA Limit Enforcement: Check buffer capacity
     current_buffer = Map.get(state.buffers, session_id, [])
     current_count = length(current_buffer)
-    
+
     cond do
       current_count >= @max_ops ->
         error_msg = """
@@ -72,16 +73,17 @@ defmodule DiwaAgent.Tala.Buffer do
 
         After clearing the buffer, you can continue adding operations.
         """
+
         {:reply, {:error, :buffer_full, error_msg}, state}
-      
+
       true ->
         # TALA Limit Enforcement: Check payload size
         payload_size = estimate_payload_size(params)
-        
+
         if payload_size > @max_payload do
           payload_kb = div(payload_size, 1024)
           limit_kb = div(@max_payload, 1024)
-          
+
           error_msg = """
           Operation payload (#{payload_kb}KB) exceeds #{limit_kb}KB limit.
 
@@ -92,6 +94,7 @@ defmodule DiwaAgent.Tala.Buffer do
 
           Note: The #{limit_kb}KB limit matches the maximum memory content size.
           """
+
           {:reply, {:error, :payload_too_large, error_msg}, state}
         else
           # Limits OK - proceed with operation
@@ -110,14 +113,15 @@ defmodule DiwaAgent.Tala.Buffer do
               new_buffer = current_buffer ++ [db_op]
               new_state = put_in(state.buffers[session_id], new_buffer)
               new_count = length(new_buffer)
-              
+
               # 3. Add warning if approaching capacity
-              warning = if new_count >= trunc(@max_ops * @warning_threshold) do
-                "Buffer at #{trunc(new_count / @max_ops * 100)}% capacity (#{new_count}/#{@max_ops}). Consider running /commit soon."
-              else
-                nil
-              end
-              
+              warning =
+                if new_count >= trunc(@max_ops * @warning_threshold) do
+                  "Buffer at #{trunc(new_count / @max_ops * 100)}% capacity (#{new_count}/#{@max_ops}). Consider running /commit soon."
+                else
+                  nil
+                end
+
               {:reply, {:ok, db_op.id, warning}, new_state}
 
             {:error, reason} ->
@@ -202,5 +206,6 @@ defmodule DiwaAgent.Tala.Buffer do
       _ -> 0
     end
   end
+
   defp estimate_payload_size(_), do: 0
 end
